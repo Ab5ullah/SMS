@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"d:\\Flutter Projects\\sms\\README.md\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
