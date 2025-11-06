@@ -24,6 +24,23 @@ class School {
   });
 
   factory School.fromMap(Map<String, dynamic> map, String id) {
+    // Parse expiry date - handle both string and Timestamp
+    DateTime parsedExpiryDate;
+    try {
+      if (map['expiryDate'] == null) {
+        parsedExpiryDate = DateTime.now().add(const Duration(days: 365));
+      } else if (map['expiryDate'] is String) {
+        // Try to parse string date
+        parsedExpiryDate = DateTime.parse(map['expiryDate']);
+      } else {
+        // Assume it's a Firestore Timestamp
+        parsedExpiryDate = map['expiryDate'].toDate();
+      }
+    } catch (e) {
+      // If parsing fails, default to 1 year from now
+      parsedExpiryDate = DateTime.now().add(const Duration(days: 365));
+    }
+
     return School(
       id: id,
       name: map['name'] ?? '',
@@ -31,9 +48,7 @@ class School {
       primaryColor: map['primaryColor'] ?? '#673AB7',
       secondaryColor: map['secondaryColor'] ?? '#512DA8',
       licenseStatus: map['licenseStatus'] ?? 'inactive',
-      expiryDate: map['expiryDate'] != null
-          ? DateTime.parse(map['expiryDate'])
-          : DateTime.now(),
+      expiryDate: parsedExpiryDate,
       address: map['address'] ?? '',
       contactNumber: map['contactNumber'] ?? '',
       email: map['email'] ?? '',
@@ -55,6 +70,7 @@ class School {
   }
 
   bool get isLicenseActive {
-    return licenseStatus == 'active' && expiryDate.isAfter(DateTime.now());
+    // Case-insensitive comparison for license status
+    return licenseStatus.toLowerCase() == 'active' && expiryDate.isAfter(DateTime.now());
   }
 }

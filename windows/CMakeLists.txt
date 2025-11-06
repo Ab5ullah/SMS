@@ -2,6 +2,15 @@
 cmake_minimum_required(VERSION 3.14)
 project(sms LANGUAGES CXX)
 
+# Force C++17 to match Firebase C++ SDK requirements
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Use static C++ runtime library (MT/MTd) instead of dynamic (MD/MDd)
+# This matches how Firebase C++ SDK is compiled
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
 set(BINARY_NAME "sms")

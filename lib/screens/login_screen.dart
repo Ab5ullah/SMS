@@ -130,6 +130,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         keyboardType: TextInputType.emailAddress,
                         decoration: const InputDecoration(
                           labelText: 'Email',
+                          helperText: 'Format: admin@schoolid.com',
+                          helperMaxLines: 2,
                           prefixIcon: Icon(Icons.email),
                           border: OutlineInputBorder(),
                         ),

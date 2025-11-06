@@ -4,6 +4,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/auth_provider.dart';
 import '../utils/helpers.dart';
 import 'login_screen.dart';
+import 'students/students_screen.dart';
+import 'teachers/teachers_screen.dart';
+import 'classes/classes_screen.dart';
+import 'attendance/attendance_screen.dart';
+import 'fees/fees_screen.dart';
+import 'exams/exams_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -304,17 +310,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
       case 0:
         return _buildDashboardContent();
       case 1:
-        return _buildPlaceholder('Students Management');
+        return const StudentsScreen();
       case 2:
-        return _buildPlaceholder('Teachers Management');
+        return const TeachersScreen();
       case 3:
-        return _buildPlaceholder('Classes & Sections');
+        return const ClassesScreen();
       case 4:
-        return _buildPlaceholder('Attendance Management');
+        return const AttendanceScreen();
       case 5:
-        return _buildPlaceholder('Fee Management');
+        return const FeesScreen();
       case 6:
-        return _buildPlaceholder('Exam Management');
+        return const ExamsScreen();
       case 7:
         return _buildPlaceholder('Reports');
       default:

@@ -1,7 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "Bash(\"d:\\Flutter Projects\\sms\\README.md\")"
+      "Bash(\"d:\\Flutter Projects\\sms\\README.md\")",
+      "Bash(flutter run:*)",
+      "Bash(flutter clean:*)",
+      "Bash(flutter pub:*)",
+      "Bash(flutter build:*)",
+      "Bash(where:*)",
+      "Bash(nul)",
+      "Bash(tee:*)",
+      "Bash(flutter config:*)",
+      "Bash(nc:*)"
     ],
     "deny": [],
     "ask": []

@@ -34,18 +34,53 @@ class AuthService {
       DocumentSnapshot userDoc =
           await _firestore.collection('users').doc(user.uid).get();
 
-      if (!userDoc.exists) {
-        await _auth.signOut();
-        return {
-          'success': false,
-          'message': 'User data not found. Please contact administrator.',
-        };
-      }
+      AppUser appUser;
 
-      AppUser appUser = AppUser.fromMap(
-        userDoc.data() as Map<String, dynamic>,
-        user.uid,
-      );
+      // If user document doesn't exist, extract schoolId from email
+      // and create a basic user document
+      if (!userDoc.exists) {
+        // Extract schoolId from email (e.g., admin@alnoor_001.com -> alnoor_001)
+        String schoolId = _extractSchoolIdFromEmail(email);
+
+        if (schoolId.isEmpty) {
+          await _auth.signOut();
+          return {
+            'success': false,
+            'message': 'Unable to determine school from email. Please use format: user@schoolid.com',
+          };
+        }
+
+        // Check if school exists
+        DocumentSnapshot schoolCheck =
+            await _firestore.collection('schools').doc(schoolId).get();
+
+        if (!schoolCheck.exists) {
+          await _auth.signOut();
+          return {
+            'success': false,
+            'message': 'School not found. Please ensure school is set up first.',
+          };
+        }
+
+        // Create user document automatically
+        appUser = AppUser(
+          id: user.uid,
+          email: email,
+          name: email.split('@')[0].replaceAll('_', ' ').toUpperCase(),
+          schoolId: schoolId,
+          role: 'admin',
+          createdAt: DateTime.now(),
+        );
+
+        // Save to Firestore
+        await _firestore.collection('users').doc(user.uid).set(appUser.toMap());
+        AppLogger.info('Created new user document for: $email');
+      } else {
+        appUser = AppUser.fromMap(
+          userDoc.data() as Map<String, dynamic>,
+          user.uid,
+        );
+      }
 
       // Verify school license
       DocumentSnapshot schoolDoc =
@@ -112,7 +147,7 @@ class AuthService {
       AppLogger.error('Sign in error: $e');
       return {
         'success': false,
-        'message': 'An error occurred. Please check your internet connection.',
+        'message': 'Error: $e',
       };
     }
   }
@@ -177,6 +212,19 @@ class AuthService {
       AppLogger.error('License verification error: $e');
       // Allow temporary offline use
       return true;
+    }
+  }
+
+  // Extract school ID from email
+  // Supports formats like: admin@alnoor_001.com or admin@schoolid.com
+  String _extractSchoolIdFromEmail(String email) {
+    try {
+      String domain = email.split('@')[1];
+      String schoolId = domain.split('.')[0];
+      return schoolId;
+    } catch (e) {
+      AppLogger.error('Error extracting school ID from email: $e');
+      return '';
     }
   }
 
