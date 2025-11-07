@@ -10,7 +10,8 @@
       "Bash(nul)",
       "Bash(tee:*)",
       "Bash(flutter config:*)",
-      "Bash(nc:*)"
+      "Bash(nc:*)",
+      "Bash(flutter analyze:*)"
     ],
     "deny": [],
     "ask": []

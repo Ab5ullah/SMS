@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/auth_provider.dart';
+import '../services/statistics_service.dart';
 import '../utils/helpers.dart';
 import 'login_screen.dart';
 import 'students/students_screen.dart';
@@ -10,6 +11,7 @@ import 'classes/classes_screen.dart';
 import 'attendance/attendance_screen.dart';
 import 'fees/fees_screen.dart';
 import 'exams/exams_screen.dart';
+import 'reports/reports_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -20,6 +22,10 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
+  final StatisticsService _statisticsService = StatisticsService();
+  Map<String, dynamic>? _statistics;
+  List<Map<String, dynamic>> _recentActivities = [];
+  bool _isLoadingStats = true;
 
   final List<_NavItem> _navItems = [
     _NavItem(
@@ -63,6 +69,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
       color: Colors.brown,
     ),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStatistics();
+  }
+
+  Future<void> _loadStatistics() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final schoolId = authProvider.currentSchool?.id;
+
+    if (schoolId == null) return;
+
+    setState(() {
+      _isLoadingStats = true;
+    });
+
+    try {
+      final stats = await _statisticsService.getSchoolStatistics(schoolId);
+      final activities = await _statisticsService.getRecentActivities(schoolId);
+
+      if (mounted) {
+        setState(() {
+          _statistics = stats;
+          _recentActivities = activities;
+          _isLoadingStats = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingStats = false;
+        });
+      }
+    }
+  }
 
   void _handleLogout() async {
     bool confirm = await Helpers.showConfirmDialog(
@@ -118,7 +160,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 color: primaryColor,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 10,
                   ),
                 ],
@@ -129,7 +171,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
+                      color: Colors.white.withValues(alpha: 0.1),
                     ),
                     child: Column(
                       children: [
@@ -149,7 +191,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 height: 80,
                                 width: 80,
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
+                                  color: Colors.white.withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(50),
                                 ),
                                 child: const Icon(
@@ -165,7 +207,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             height: 80,
                             width: 80,
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(50),
                             ),
                             child: const Icon(
@@ -188,7 +230,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Text(
                           user.role.toUpperCase(),
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.8),
+                            color: Colors.white.withValues(alpha: 0.8),
                             fontSize: 12,
                           ),
                         ),
@@ -208,7 +250,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           padding: const EdgeInsets.only(bottom: 4),
                           child: ListTile(
                             selected: isSelected,
-                            selectedTileColor: Colors.white.withOpacity(0.2),
+                            selectedTileColor: Colors.white.withValues(alpha: 0.2),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -239,7 +281,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     decoration: BoxDecoration(
                       border: Border(
                         top: BorderSide(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                         ),
                       ),
                     ),
@@ -247,7 +289,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       children: [
                         ListTile(
                           leading: CircleAvatar(
-                            backgroundColor: Colors.white.withOpacity(0.2),
+                            backgroundColor: Colors.white.withValues(alpha: 0.2),
                             child: Text(
                               user.name.isNotEmpty
                                   ? user.name[0].toUpperCase()
@@ -269,7 +311,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           subtitle: Text(
                             user.email,
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.7),
+                              color: Colors.white.withValues(alpha: 0.7),
                               fontSize: 12,
                             ),
                           ),
@@ -322,7 +364,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       case 6:
         return const ExamsScreen();
       case 7:
-        return _buildPlaceholder('Reports');
+        return const ReportsScreen();
       default:
         return _buildDashboardContent();
     }
@@ -371,8 +413,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   decoration: BoxDecoration(
                     color: school.isLicenseActive
-                        ? Colors.green.withOpacity(0.1)
-                        : Colors.red.withOpacity(0.1),
+                        ? Colors.green.withValues(alpha: 0.1)
+                        : Colors.red.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: school.isLicenseActive
@@ -411,40 +453,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             const SizedBox(height: 24),
             // Stats Cards
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 4,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.5,
-              children: [
-                _buildStatCard(
-                  title: 'Total Students',
-                  value: '0',
-                  icon: Icons.people,
-                  color: Colors.blue,
-                ),
-                _buildStatCard(
-                  title: 'Total Teachers',
-                  value: '0',
-                  icon: Icons.person,
-                  color: Colors.green,
-                ),
-                _buildStatCard(
-                  title: 'Fees Collected',
-                  value: 'Rs. 0',
-                  icon: Icons.payment,
-                  color: Colors.orange,
-                ),
-                _buildStatCard(
-                  title: 'Attendance Today',
-                  value: '0%',
-                  icon: Icons.fact_check,
-                  color: Colors.purple,
-                ),
-              ],
-            ),
+            _isLoadingStats
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(40),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
+                : GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: 4,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 1.5,
+                    children: [
+                      _buildStatCard(
+                        title: 'Total Students',
+                        value: '${_statistics?['totalStudents'] ?? 0}',
+                        icon: Icons.people,
+                        color: Colors.blue,
+                      ),
+                      _buildStatCard(
+                        title: 'Total Teachers',
+                        value: '${_statistics?['totalTeachers'] ?? 0}',
+                        icon: Icons.person,
+                        color: Colors.green,
+                      ),
+                      _buildStatCard(
+                        title: 'Fees Collected',
+                        value:
+                            'Rs. ${(_statistics?['totalFeesCollected'] ?? 0).toStringAsFixed(0)}',
+                        icon: Icons.payment,
+                        color: Colors.orange,
+                      ),
+                      _buildStatCard(
+                        title: 'Attendance Today',
+                        value:
+                            '${(_statistics?['attendancePercentage'] ?? 0).toStringAsFixed(1)}%',
+                        icon: Icons.fact_check,
+                        color: Colors.purple,
+                      ),
+                    ],
+                  ),
             const SizedBox(height: 24),
             // Recent Activities
             Row(
@@ -459,19 +510,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Recent Activities',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Recent Activities',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.refresh),
+                                onPressed: _loadStatistics,
+                                tooltip: 'Refresh',
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 16),
-                          _buildActivityItem(
-                            'No recent activities',
-                            Icons.info,
-                            Colors.grey,
-                          ),
+                          if (_recentActivities.isEmpty)
+                            _buildActivityItem(
+                              'No recent activities',
+                              Icons.info,
+                              Colors.grey,
+                              null,
+                            )
+                          else
+                            ..._recentActivities.take(5).map((activity) =>
+                                _buildActivityItem(
+                                  activity['message'] as String,
+                                  _getIconData(activity['icon'] as String),
+                                  Colors.blue,
+                                  activity['time'] as DateTime,
+                                )),
                         ],
                       ),
                     ),
@@ -559,7 +630,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(icon, color: color, size: 24),
@@ -592,7 +663,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildActivityItem(String text, IconData icon, Color color) {
+  Widget _buildActivityItem(
+      String text, IconData icon, Color color, DateTime? time) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -600,14 +672,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Icon(icon, color: color, size: 20),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(fontSize: 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  text,
+                  style: const TextStyle(fontSize: 14),
+                ),
+                if (time != null)
+                  Text(
+                    _getTimeAgo(time),
+                    style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                  ),
+              ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  IconData _getIconData(String iconName) {
+    switch (iconName) {
+      case 'person_add':
+        return Icons.person_add;
+      case 'payment':
+        return Icons.payment;
+      case 'fact_check':
+        return Icons.fact_check;
+      default:
+        return Icons.info;
+    }
+  }
+
+  String _getTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inDays > 0) {
+      return '${difference.inDays} day${difference.inDays > 1 ? 's' : ''} ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours} hour${difference.inHours > 1 ? 's' : ''} ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes} minute${difference.inMinutes > 1 ? 's' : ''} ago';
+    } else {
+      return 'Just now';
+    }
   }
 
   Widget _buildQuickAction(
@@ -622,7 +732,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -634,41 +744,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               style: TextStyle(
                 color: color,
                 fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPlaceholder(String title) {
-    return Container(
-      color: Colors.grey[100],
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.construction,
-              size: 80,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'This module is under development',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[500],
               ),
             ),
           ],
