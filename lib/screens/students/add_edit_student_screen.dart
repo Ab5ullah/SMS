@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/student.dart';
+import '../../models/class_section.dart';
 import '../../utils/helpers.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
@@ -22,11 +23,12 @@ class _AddEditStudentScreenState extends State<AddEditStudentScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _fatherNameController = TextEditingController();
-  final _classNameController = TextEditingController();
-  final _sectionController = TextEditingController();
   final _rollNumberController = TextEditingController();
   final _contactController = TextEditingController();
   final _addressController = TextEditingController();
+  String? _selectedClassId;
+  String _selectedClassName = '';
+  String _selectedSection = '';
   DateTime _admissionDate = DateTime.now();
   bool _isLoading = false;
 
@@ -36,8 +38,9 @@ class _AddEditStudentScreenState extends State<AddEditStudentScreen> {
     if (widget.student != null) {
       _nameController.text = widget.student!.name;
       _fatherNameController.text = widget.student!.fatherName;
-      _classNameController.text = widget.student!.className;
-      _sectionController.text = widget.student!.section;
+      _selectedClassId = widget.student!.classId;
+      _selectedClassName = widget.student!.className;
+      _selectedSection = widget.student!.section;
       _rollNumberController.text = widget.student!.rollNumber;
       _contactController.text = widget.student!.contact;
       _addressController.text = widget.student!.address;
@@ -49,8 +52,6 @@ class _AddEditStudentScreenState extends State<AddEditStudentScreen> {
   void dispose() {
     _nameController.dispose();
     _fatherNameController.dispose();
-    _classNameController.dispose();
-    _sectionController.dispose();
     _rollNumberController.dispose();
     _contactController.dispose();
     _addressController.dispose();
@@ -87,8 +88,9 @@ class _AddEditStudentScreenState extends State<AddEditStudentScreen> {
         'schoolId': schoolId,
         'name': _nameController.text.trim(),
         'fatherName': _fatherNameController.text.trim(),
-        'className': _classNameController.text.trim(),
-        'section': _sectionController.text.trim(),
+        'classId': _selectedClassId,
+        'className': _selectedClassName,
+        'section': _selectedSection,
         'rollNumber': _rollNumberController.text.trim(),
         'contact': _contactController.text.trim(),
         'address': _addressController.text.trim(),
@@ -145,7 +147,9 @@ class _AddEditStudentScreenState extends State<AddEditStudentScreen> {
     final isEdit = widget.student != null;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+      backgroundColor: isDark
+          ? AppColors.backgroundDark
+          : AppColors.backgroundLight,
       body: Column(
         children: [
           // Modern Header
@@ -245,39 +249,7 @@ class _AddEditStudentScreenState extends State<AddEditStudentScreen> {
                             padding: const EdgeInsets.all(AppSpacing.lg),
                             child: Column(
                               children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: CustomTextField(
-                                        controller: _classNameController,
-                                        label: 'Class',
-                                        hint: 'e.g., 9th, 10th',
-                                        prefixIcon: Icons.class_rounded,
-                                        validator: (value) {
-                                          if (value == null || value.trim().isEmpty) {
-                                            return 'Required';
-                                          }
-                                          return null;
-                                        },
-                                      ),
-                                    ),
-                                    const SizedBox(width: AppSpacing.md),
-                                    Expanded(
-                                      child: CustomTextField(
-                                        controller: _sectionController,
-                                        label: 'Section',
-                                        hint: 'e.g., A, B',
-                                        prefixIcon: Icons.label_rounded,
-                                        validator: (value) {
-                                          if (value == null || value.trim().isEmpty) {
-                                            return 'Required';
-                                          }
-                                          return null;
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                _buildClassSelector(isDark),
                                 const SizedBox(height: AppSpacing.md),
                                 CustomTextField(
                                   controller: _rollNumberController,
@@ -311,7 +283,9 @@ class _AddEditStudentScreenState extends State<AddEditStudentScreen> {
                             const SizedBox(width: AppSpacing.md),
                             CustomButton(
                               text: isEdit ? 'Update Student' : 'Add Student',
-                              icon: isEdit ? Icons.check_rounded : Icons.person_add_rounded,
+                              icon: isEdit
+                                  ? Icons.check_rounded
+                                  : Icons.person_add_rounded,
                               isLoading: _isLoading,
                               onPressed: _saveStudent,
                             ),
@@ -410,17 +384,15 @@ class _AddEditStudentScreenState extends State<AddEditStudentScreen> {
             color: AppColors.dashboardStudents.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
           ),
-          child: Icon(
-            icon,
-            size: 20,
-            color: AppColors.dashboardStudents,
-          ),
+          child: Icon(icon, size: 20, color: AppColors.dashboardStudents),
         ),
         const SizedBox(width: AppSpacing.sm),
         Text(
           title,
           style: AppTypography.titleLarge.copyWith(
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            color: isDark
+                ? AppColors.textPrimaryDark
+                : AppColors.textPrimaryLight,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -490,6 +462,175 @@ class _AddEditStudentScreenState extends State<AddEditStudentScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildClassSelector(bool isDark) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final schoolId = authProvider.currentSchool?.id ?? '';
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('classes')
+          .where('schoolId', isEqualTo: schoolId)
+          .orderBy('className')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(AppSpacing.md),
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Text(
+              'Error loading classes: ${snapshot.error}',
+              style: TextStyle(color: AppColors.errorDark),
+            ),
+          );
+        }
+
+        final classes =
+            snapshot.data?.docs
+                .map(
+                  (doc) => ClassSection.fromMap(
+                    doc.data() as Map<String, dynamic>,
+                    doc.id,
+                  ),
+                )
+                .toList() ??
+            [];
+
+        if (classes.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? AppColors.backgroundDark
+                  : AppColors.backgroundLight,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              border: Border.all(
+                color: isDark
+                    ? AppColors.borderDark.withValues(alpha: 0.5)
+                    : AppColors.borderLight.withValues(alpha: 0.5),
+              ),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.class_outlined,
+                  size: 48,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'No classes available',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Create classes first to assign students',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DropdownButtonFormField<String>(
+              value: _selectedClassId,
+              decoration: InputDecoration(
+                labelText: 'Select Class & Section',
+                hintText: 'Choose a class',
+                prefixIcon: Icon(
+                  Icons.class_rounded,
+                  color: AppColors.dashboardStudents,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  borderSide: BorderSide(
+                    color: isDark
+                        ? AppColors.borderDark
+                        : AppColors.borderLight,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  borderSide: BorderSide(
+                    color: AppColors.dashboardStudents,
+                    width: 2,
+                  ),
+                ),
+                filled: true,
+                fillColor: isDark
+                    ? AppColors.surfaceDark
+                    : AppColors.surfaceLight,
+              ),
+              items: classes.map((classSection) {
+                return DropdownMenuItem<String>(
+                  value: classSection.id,
+                  child: Text(
+                    '${classSection.className} - ${classSection.section}',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                );
+              }).toList(),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please select a class';
+                }
+                return null;
+              },
+              onChanged: (value) {
+                setState(() {
+                  _selectedClassId = value;
+                  if (value != null) {
+                    final selectedClass = classes.firstWhere(
+                      (c) => c.id == value,
+                    );
+                    _selectedClassName = selectedClass.className;
+                    _selectedSection = selectedClass.section;
+                  }
+                });
+              },
+            ),
+            if (_selectedClassId != null) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Padding(
+                padding: const EdgeInsets.only(left: AppSpacing.xs),
+                child: Text(
+                  'Selected: $_selectedClassName - $_selectedSection',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.dashboardStudents,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/class_section.dart';
+import '../../models/student.dart';
 import '../../utils/helpers.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
@@ -658,6 +659,68 @@ class _ClassesScreenState extends State<ClassesScreen> {
                 Icons.person_rounded,
                 isDark,
               ),
+
+              // Subject Assignments
+              if (classSection.subjects.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.md),
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? AppColors.surfaceDark
+                        : AppColors.backgroundLight,
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(AppSpacing.xs),
+                            decoration: BoxDecoration(
+                              color: AppColors.dashboardClasses
+                                  .withValues(alpha: 0.1),
+                              borderRadius:
+                                  BorderRadius.circular(AppSpacing.radiusXs),
+                            ),
+                            child: Icon(
+                              Icons.book_rounded,
+                              size: 16,
+                              color: AppColors.dashboardClasses,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Text(
+                            'Subjects & Teachers',
+                            style: AppTypography.labelSmall.copyWith(
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      ...classSection.subjects.map((subject) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                          child: _buildSubjectChip(
+                            subject.subjectName,
+                            subject.teacherName ?? 'No teacher assigned',
+                            isDark,
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+              ],
+
+              // Assigned Students
+              const SizedBox(height: AppSpacing.md),
+              _buildAssignedStudentsSection(classSection, isDark),
             ],
           ),
         ),
@@ -730,6 +793,304 @@ class _ClassesScreenState extends State<ClassesScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSubjectChip(String subjectName, String teacherName, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.dashboardTeachers.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+        border: Border.all(
+          color: AppColors.dashboardTeachers.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.max,
+        children: [
+          Icon(
+            Icons.book_rounded,
+            size: 14,
+            color: AppColors.dashboardTeachers,
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  subjectName,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  teacherName,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            Icons.person_rounded,
+            size: 14,
+            color: AppColors.dashboardTeachers,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAssignedStudentsSection(ClassSection classSection, bool isDark) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('students')
+          .where('classId', isEqualTo: classSection.id)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(AppSpacing.sm),
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          final errorColor = isDark ? AppColors.errorDark : AppColors.errorLight;
+          return Container(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            decoration: BoxDecoration(
+              color: errorColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusXs),
+              border: Border.all(
+                color: errorColor.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 16,
+                  color: errorColor,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(
+                  child: Text(
+                    'Error loading students',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: errorColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        // Debug logging
+        print('=== Assigned Students Debug ===');
+        print('Class ID: ${classSection.id}');
+        print('Class Name: ${classSection.className}-${classSection.section}');
+        print('Snapshot has data: ${snapshot.hasData}');
+        print('Number of docs: ${snapshot.data?.docs.length ?? 0}');
+
+        final students = snapshot.data?.docs
+                .map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  print('Student doc ID: ${doc.id}, classId in doc: ${data['classId']}');
+                  return Student.fromMap(data, doc.id);
+                })
+                .toList() ??
+            [];
+
+        print('Students parsed: ${students.length}');
+        print('================================');
+
+        return Container(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : AppColors.backgroundLight,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.xs),
+                    decoration: BoxDecoration(
+                      color: AppColors.dashboardStudents.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusXs),
+                    ),
+                    child: Icon(
+                      Icons.people_rounded,
+                      size: 16,
+                      color: AppColors.dashboardStudents,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    'Assigned Students',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xs,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.dashboardStudents.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                    ),
+                    child: Text(
+                      '${students.length} ${students.length == 1 ? 'student' : 'students'}',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.dashboardStudents,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              if (students.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: (isDark ? AppColors.infoDark : AppColors.infoLight).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusXs),
+                    border: Border.all(
+                      color: (isDark ? AppColors.infoDark : AppColors.infoLight).withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 16,
+                            color: isDark ? AppColors.infoDark : AppColors.infoLight,
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          Text(
+                            'No students assigned yet',
+                            style: AppTypography.labelSmall.copyWith(
+                              color: isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimaryLight,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'Students will appear here when you:\n• Add new students and select this class\n• Edit existing students and update their class',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                ...students.take(5).map((student) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: AppColors.dashboardStudents.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              student.name.isNotEmpty ? student.name[0].toUpperCase() : '?',
+                              style: AppTypography.labelSmall.copyWith(
+                                color: AppColors.dashboardStudents,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                student.name,
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: isDark
+                                      ? AppColors.textPrimaryDark
+                                      : AppColors.textPrimaryLight,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                'Roll: ${student.rollNumber}',
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: isDark
+                                      ? AppColors.textSecondaryDark
+                                      : AppColors.textSecondaryLight,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              if (students.length > 5)
+                Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.xs),
+                  child: Text(
+                    '+ ${students.length - 5} more students',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.dashboardStudents,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

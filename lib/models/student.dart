@@ -3,6 +3,7 @@ class Student {
   final String schoolId;
   final String name;
   final String fatherName;
+  final String? classId;  // Reference to class document ID
   final String className;
   final String section;
   final String rollNumber;
@@ -19,6 +20,7 @@ class Student {
     required this.schoolId,
     required this.name,
     required this.fatherName,
+    this.classId,
     required this.className,
     required this.section,
     required this.rollNumber,
@@ -37,6 +39,7 @@ class Student {
       schoolId: map['schoolId'] ?? '',
       name: map['name'] ?? '',
       fatherName: map['fatherName'] ?? '',
+      classId: map['classId'],
       className: map['className'] ?? '',
       section: map['section'] ?? '',
       rollNumber: map['rollNumber'] ?? '',
@@ -62,6 +65,7 @@ class Student {
       'schoolId': schoolId,
       'name': name,
       'fatherName': fatherName,
+      'classId': classId,
       'className': className,
       'section': section,
       'rollNumber': rollNumber,
@@ -80,6 +84,7 @@ class Student {
     String? schoolId,
     String? name,
     String? fatherName,
+    String? classId,
     String? className,
     String? section,
     String? rollNumber,
@@ -96,6 +101,7 @@ class Student {
       schoolId: schoolId ?? this.schoolId,
       name: name ?? this.name,
       fatherName: fatherName ?? this.fatherName,
+      classId: classId ?? this.classId,
       className: className ?? this.className,
       section: section ?? this.section,
       rollNumber: rollNumber ?? this.rollNumber,

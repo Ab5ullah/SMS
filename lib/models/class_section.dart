@@ -1,3 +1,43 @@
+class SubjectAssignment {
+  final String subjectName;
+  final String? teacherId;
+  final String? teacherName;
+
+  SubjectAssignment({
+    required this.subjectName,
+    this.teacherId,
+    this.teacherName,
+  });
+
+  factory SubjectAssignment.fromMap(Map<String, dynamic> map) {
+    return SubjectAssignment(
+      subjectName: map['subjectName'] ?? '',
+      teacherId: map['teacherId'],
+      teacherName: map['teacherName'],
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'subjectName': subjectName,
+      'teacherId': teacherId,
+      'teacherName': teacherName,
+    };
+  }
+
+  SubjectAssignment copyWith({
+    String? subjectName,
+    String? teacherId,
+    String? teacherName,
+  }) {
+    return SubjectAssignment(
+      subjectName: subjectName ?? this.subjectName,
+      teacherId: teacherId ?? this.teacherId,
+      teacherName: teacherName ?? this.teacherName,
+    );
+  }
+}
+
 class ClassSection {
   final String? id;
   final String schoolId;
@@ -5,6 +45,7 @@ class ClassSection {
   final String section;
   final String? classTeacherId;
   final int capacity;
+  final List<SubjectAssignment> subjects;
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool synced;
@@ -16,6 +57,7 @@ class ClassSection {
     required this.section,
     this.classTeacherId,
     required this.capacity,
+    this.subjects = const [],
     required this.createdAt,
     required this.updatedAt,
     this.synced = false,
@@ -29,6 +71,11 @@ class ClassSection {
       section: map['section'] ?? '',
       classTeacherId: map['classTeacherId'],
       capacity: map['capacity'] ?? 30,
+      subjects: map['subjects'] != null
+          ? (map['subjects'] as List)
+              .map((subject) => SubjectAssignment.fromMap(subject))
+              .toList()
+          : [],
       createdAt: map['createdAt'] != null
           ? DateTime.parse(map['createdAt'])
           : DateTime.now(),
@@ -47,6 +94,7 @@ class ClassSection {
       'section': section,
       'classTeacherId': classTeacherId,
       'capacity': capacity,
+      'subjects': subjects.map((subject) => subject.toMap()).toList(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'synced': synced,
@@ -62,6 +110,7 @@ class ClassSection {
     String? section,
     String? classTeacherId,
     int? capacity,
+    List<SubjectAssignment>? subjects,
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? synced,
@@ -73,6 +122,7 @@ class ClassSection {
       section: section ?? this.section,
       classTeacherId: classTeacherId ?? this.classTeacherId,
       capacity: capacity ?? this.capacity,
+      subjects: subjects ?? this.subjects,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       synced: synced ?? this.synced,
