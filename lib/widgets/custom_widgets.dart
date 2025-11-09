@@ -590,7 +590,10 @@ class CustomDialog extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
       ),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 500),
+        constraints: const BoxConstraints(
+          maxWidth: 500,
+          maxHeight: 600, // Prevent overflow by limiting dialog height
+        ),
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -622,7 +625,9 @@ class CustomDialog extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.md),
-            content,
+            Flexible(
+              child: content,
+            ),
             if (actions != null && actions!.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.lg),
               Row(

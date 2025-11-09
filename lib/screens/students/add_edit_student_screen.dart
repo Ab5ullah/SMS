@@ -83,6 +83,45 @@ class _AddEditStudentScreenState extends State<AddEditStudentScreen> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final schoolId = authProvider.currentSchool?.id ?? '';
 
+      // Check capacity before adding/updating student
+      if (_selectedClassId != null) {
+        // Fetch the class to check capacity
+        final classDoc = await FirebaseFirestore.instance
+            .collection('classes')
+            .doc(_selectedClassId)
+            .get();
+
+        if (classDoc.exists) {
+          final classData = classDoc.data() as Map<String, dynamic>;
+          final classCapacity = classData['capacity'] ?? 30;
+
+          // Count current students in the class
+          final studentsQuery = await FirebaseFirestore.instance
+              .collection('students')
+              .where('classId', isEqualTo: _selectedClassId)
+              .get();
+
+          int currentStudentCount = studentsQuery.docs.length;
+
+          // If editing, exclude the current student from count
+          if (widget.student != null && widget.student!.classId == _selectedClassId) {
+            currentStudentCount--;
+          }
+
+          // Check if class is full
+          if (currentStudentCount >= classCapacity) {
+            if (mounted) {
+              Helpers.showSnackBar(
+                context,
+                'Class is full! Capacity: $classCapacity students. Please select another class or increase capacity.',
+                isError: true,
+              );
+            }
+            return;
+          }
+        }
+      }
+
       final now = DateTime.now();
       final studentData = {
         'schoolId': schoolId,
@@ -591,7 +630,7 @@ class _AddEditStudentScreenState extends State<AddEditStudentScreen> {
                 return DropdownMenuItem<String>(
                   value: classSection.id,
                   child: Text(
-                    '${classSection.className} - ${classSection.section}',
+                    '${classSection.className} - ${classSection.section} (Capacity: ${classSection.capacity})',
                     overflow: TextOverflow.ellipsis,
                   ),
                 );
@@ -617,15 +656,67 @@ class _AddEditStudentScreenState extends State<AddEditStudentScreen> {
             ),
             if (_selectedClassId != null) ...[
               const SizedBox(height: AppSpacing.xs),
-              Padding(
-                padding: const EdgeInsets.only(left: AppSpacing.xs),
-                child: Text(
-                  'Selected: $_selectedClassName - $_selectedSection',
-                  style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.dashboardStudents,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('students')
+                    .where('classId', isEqualTo: _selectedClassId)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const SizedBox.shrink();
+                  }
+
+                  final selectedClass = classes.firstWhere(
+                    (c) => c.id == _selectedClassId,
+                  );
+                  final currentCount = snapshot.data!.docs.length;
+                  final capacity = selectedClass.capacity;
+                  final availableSpots = capacity - currentCount;
+                  final percentage = (currentCount / capacity * 100).round();
+
+                  Color statusColor;
+                  if (percentage >= 100) {
+                    statusColor = isDark ? AppColors.errorDark : AppColors.errorLight;
+                  } else if (percentage >= 80) {
+                    statusColor = isDark ? AppColors.warningDark : AppColors.warningLight;
+                  } else {
+                    statusColor = isDark ? AppColors.successDark : AppColors.successLight;
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.only(left: AppSpacing.xs),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Selected: $_selectedClassName - $_selectedSection',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: AppColors.dashboardStudents,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.people_rounded,
+                              size: 14,
+                              color: statusColor,
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            Text(
+                              '$currentCount / $capacity students ($availableSpots ${availableSpots == 1 ? 'spot' : 'spots'} available)',
+                              style: AppTypography.labelSmall.copyWith(
+                                color: statusColor,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ],
           ],

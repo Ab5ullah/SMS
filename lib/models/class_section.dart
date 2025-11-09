@@ -73,8 +73,8 @@ class ClassSection {
       capacity: map['capacity'] ?? 30,
       subjects: map['subjects'] != null
           ? (map['subjects'] as List)
-              .map((subject) => SubjectAssignment.fromMap(subject))
-              .toList()
+                .map((subject) => SubjectAssignment.fromMap(subject))
+                .toList()
           : [],
       createdAt: map['createdAt'] != null
           ? DateTime.parse(map['createdAt'])

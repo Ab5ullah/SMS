@@ -653,12 +653,7 @@ class _ClassesScreenState extends State<ClassesScreen> {
                 isDark,
               ),
               const SizedBox(height: AppSpacing.sm),
-              _buildDetailRow(
-                'Class Teacher',
-                classSection.classTeacherId ?? 'Not assigned',
-                Icons.person_rounded,
-                isDark,
-              ),
+              _buildClassTeacherRow(classSection, isDark),
 
               // Subject Assignments
               if (classSection.subjects.isNotEmpty) ...[
@@ -679,10 +674,12 @@ class _ClassesScreenState extends State<ClassesScreen> {
                           Container(
                             padding: const EdgeInsets.all(AppSpacing.xs),
                             decoration: BoxDecoration(
-                              color: AppColors.dashboardClasses
-                                  .withValues(alpha: 0.1),
-                              borderRadius:
-                                  BorderRadius.circular(AppSpacing.radiusXs),
+                              color: AppColors.dashboardClasses.withValues(
+                                alpha: 0.1,
+                              ),
+                              borderRadius: BorderRadius.circular(
+                                AppSpacing.radiusXs,
+                              ),
                             ),
                             child: Icon(
                               Icons.book_rounded,
@@ -796,7 +793,51 @@ class _ClassesScreenState extends State<ClassesScreen> {
     );
   }
 
-  Widget _buildSubjectChip(String subjectName, String teacherName, bool isDark) {
+  Widget _buildClassTeacherRow(ClassSection classSection, bool isDark) {
+    // If no teacher is assigned, show "Not assigned"
+    if (classSection.classTeacherId == null) {
+      return _buildDetailRow(
+        'Class Teacher',
+        'Not assigned',
+        Icons.person_rounded,
+        isDark,
+      );
+    }
+
+    // Fetch teacher details from Firestore
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('teachers')
+          .doc(classSection.classTeacherId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        String teacherName = 'Loading...';
+
+        if (snapshot.hasError) {
+          teacherName = 'Error loading teacher';
+        } else if (snapshot.hasData && snapshot.data!.exists) {
+          final teacherData = snapshot.data!.data() as Map<String, dynamic>;
+          teacherName = teacherData['name'] ?? 'Unknown';
+        } else if (snapshot.connectionState == ConnectionState.done &&
+            !snapshot.hasData) {
+          teacherName = 'Teacher not found';
+        }
+
+        return _buildDetailRow(
+          'Class Teacher',
+          teacherName,
+          Icons.person_rounded,
+          isDark,
+        );
+      },
+    );
+  }
+
+  Widget _buildSubjectChip(
+    String subjectName,
+    String teacherName,
+    bool isDark,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
@@ -854,6 +895,36 @@ class _ClassesScreenState extends State<ClassesScreen> {
   }
 
   Widget _buildAssignedStudentsSection(ClassSection classSection, bool isDark) {
+    // Debug: Print class ID
+    print(
+      'Building assigned students section for class ID: ${classSection.id}',
+    );
+
+    // If classId is null, show info message instead of querying
+    if (classSection.id == null) {
+      final infoColor = isDark ? AppColors.infoDark : AppColors.infoLight;
+      return Container(
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        decoration: BoxDecoration(
+          color: infoColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusXs),
+          border: Border.all(color: infoColor.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, size: 16, color: infoColor),
+            const SizedBox(width: AppSpacing.xs),
+            Expanded(
+              child: Text(
+                'Class ID is missing. Cannot load students.',
+                style: AppTypography.labelSmall.copyWith(color: infoColor),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('students')
@@ -870,29 +941,27 @@ class _ClassesScreenState extends State<ClassesScreen> {
         }
 
         if (snapshot.hasError) {
-          final errorColor = isDark ? AppColors.errorDark : AppColors.errorLight;
+          print('Error loading students: ${snapshot.error}');
+          final errorColor = isDark
+              ? AppColors.errorDark
+              : AppColors.errorLight;
           return Container(
             padding: const EdgeInsets.all(AppSpacing.sm),
             decoration: BoxDecoration(
               color: errorColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppSpacing.radiusXs),
-              border: Border.all(
-                color: errorColor.withValues(alpha: 0.3),
-              ),
+              border: Border.all(color: errorColor.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
-                Icon(
-                  Icons.error_outline,
-                  size: 16,
-                  color: errorColor,
-                ),
+                Icon(Icons.error_outline, size: 16, color: errorColor),
                 const SizedBox(width: AppSpacing.xs),
                 Expanded(
                   child: Text(
-                    'Error loading students',
+                    'Error loading students: ${snapshot.error}',
                     style: AppTypography.labelSmall.copyWith(
                       color: errorColor,
+                      fontSize: 10,
                     ),
                   ),
                 ),
@@ -908,13 +977,14 @@ class _ClassesScreenState extends State<ClassesScreen> {
         print('Snapshot has data: ${snapshot.hasData}');
         print('Number of docs: ${snapshot.data?.docs.length ?? 0}');
 
-        final students = snapshot.data?.docs
-                .map((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  print('Student doc ID: ${doc.id}, classId in doc: ${data['classId']}');
-                  return Student.fromMap(data, doc.id);
-                })
-                .toList() ??
+        final students =
+            snapshot.data?.docs.map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              print(
+                'Student doc ID: ${doc.id}, classId in doc: ${data['classId']}',
+              );
+              return Student.fromMap(data, doc.id);
+            }).toList() ??
             [];
 
         print('Students parsed: ${students.length}');
@@ -979,10 +1049,12 @@ class _ClassesScreenState extends State<ClassesScreen> {
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.sm),
                   decoration: BoxDecoration(
-                    color: (isDark ? AppColors.infoDark : AppColors.infoLight).withValues(alpha: 0.1),
+                    color: (isDark ? AppColors.infoDark : AppColors.infoLight)
+                        .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppSpacing.radiusXs),
                     border: Border.all(
-                      color: (isDark ? AppColors.infoDark : AppColors.infoLight).withValues(alpha: 0.3),
+                      color: (isDark ? AppColors.infoDark : AppColors.infoLight)
+                          .withValues(alpha: 0.3),
                     ),
                   ),
                   child: Column(
@@ -993,7 +1065,9 @@ class _ClassesScreenState extends State<ClassesScreen> {
                           Icon(
                             Icons.info_outline,
                             size: 16,
-                            color: isDark ? AppColors.infoDark : AppColors.infoLight,
+                            color: isDark
+                                ? AppColors.infoDark
+                                : AppColors.infoLight,
                           ),
                           const SizedBox(width: AppSpacing.xs),
                           Text(
@@ -1030,12 +1104,16 @@ class _ClassesScreenState extends State<ClassesScreen> {
                           width: 32,
                           height: 32,
                           decoration: BoxDecoration(
-                            color: AppColors.dashboardStudents.withValues(alpha: 0.1),
+                            color: AppColors.dashboardStudents.withValues(
+                              alpha: 0.1,
+                            ),
                             shape: BoxShape.circle,
                           ),
                           child: Center(
                             child: Text(
-                              student.name.isNotEmpty ? student.name[0].toUpperCase() : '?',
+                              student.name.isNotEmpty
+                                  ? student.name[0].toUpperCase()
+                                  : '?',
                               style: AppTypography.labelSmall.copyWith(
                                 color: AppColors.dashboardStudents,
                                 fontWeight: FontWeight.bold,
