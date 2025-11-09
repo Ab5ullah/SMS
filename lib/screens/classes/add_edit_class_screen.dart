@@ -4,6 +4,10 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/class_section.dart';
 import '../../utils/helpers.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_typography.dart';
+import '../../widgets/custom_widgets.dart';
 
 class AddEditClassScreen extends StatefulWidget {
   final ClassSection? classSection;
@@ -111,100 +115,250 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isEdit = widget.classSection != null;
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.classSection == null ? 'Add Class' : 'Edit Class'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextFormField(
-                controller: _classNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Class Name',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.class_),
-                  hintText: 'e.g., 1, 2, 10',
+      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+      body: Column(
+        children: [
+          // Modern Header
+          _buildModernHeader(isDark, isEdit),
+          // Form Content
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 800),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Class Information Section
+                        _buildSectionHeader(
+                          'Class Information',
+                          Icons.class_rounded,
+                          isDark,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        CustomCard(
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            child: Column(
+                              children: [
+                                CustomTextField(
+                                  controller: _classNameController,
+                                  label: 'Class Name',
+                                  hint: 'e.g., 1, 2, 10',
+                                  prefixIcon: Icons.class_rounded,
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Please enter class name';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                CustomTextField(
+                                  controller: _sectionController,
+                                  label: 'Section',
+                                  hint: 'e.g., A, B, C',
+                                  prefixIcon: Icons.label_rounded,
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Please enter section';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                CustomTextField(
+                                  controller: _capacityController,
+                                  label: 'Capacity',
+                                  hint: 'Maximum number of students',
+                                  prefixIcon: Icons.people_rounded,
+                                  keyboardType: TextInputType.number,
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Please enter capacity';
+                                    }
+                                    final capacity = int.tryParse(value);
+                                    if (capacity == null || capacity <= 0) {
+                                      return 'Please enter a valid number';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xl),
+
+                        // Teacher Assignment Section
+                        _buildSectionHeader(
+                          'Teacher Assignment',
+                          Icons.person_rounded,
+                          isDark,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        CustomCard(
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            child: Column(
+                              children: [
+                                CustomTextField(
+                                  controller: _classTeacherIdController,
+                                  label: 'Class Teacher ID (Optional)',
+                                  hint: 'Enter teacher ID',
+                                  prefixIcon: Icons.person_rounded,
+                                ),
+                                const SizedBox(height: 4),
+                                Padding(
+                                  padding: const EdgeInsets.only(left: AppSpacing.xs),
+                                  child: Text(
+                                    'Leave empty if no teacher is assigned yet',
+                                    style: AppTypography.labelSmall.copyWith(
+                                      color: isDark
+                                          ? AppColors.textSecondaryDark
+                                          : AppColors.textSecondaryLight,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xxl),
+
+                        // Action Buttons
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            CustomButton(
+                              text: 'Cancel',
+                              variant: ButtonVariant.ghost,
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            CustomButton(
+                              text: isEdit ? 'Update Class' : 'Add Class',
+                              icon: isEdit ? Icons.check_rounded : Icons.add_rounded,
+                              isLoading: _isLoading,
+                              onPressed: _saveClass,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.lg),
+                      ],
+                    ),
+                  ),
                 ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter class name';
-                  }
-                  return null;
-                },
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _sectionController,
-                decoration: const InputDecoration(
-                  labelText: 'Section',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.label),
-                  hintText: 'e.g., A, B, C',
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter section';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _capacityController,
-                decoration: const InputDecoration(
-                  labelText: 'Capacity',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.people),
-                  hintText: 'Maximum number of students',
-                ),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter capacity';
-                  }
-                  final capacity = int.tryParse(value);
-                  if (capacity == null || capacity <= 0) {
-                    return 'Please enter a valid number';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _classTeacherIdController,
-                decoration: const InputDecoration(
-                  labelText: 'Class Teacher ID (Optional)',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person),
-                  hintText: 'Enter teacher ID',
-                ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _saveClass,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(
-                        widget.classSection == null ? 'Add Class' : 'Update Class',
-                        style: const TextStyle(fontSize: 16),
-                      ),
-              ),
-            ],
+            ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModernHeader(bool isDark, bool isEdit) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.dashboardClasses,
+            AppColors.dashboardClasses.withValues(alpha: 0.8),
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Row(
+          children: [
+            CustomButton(
+              text: '',
+              icon: Icons.arrow_back_rounded,
+              variant: ButtonVariant.ghost,
+              onPressed: () => Navigator.pop(context),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              ),
+              child: Icon(
+                isEdit ? Icons.edit_rounded : Icons.add_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isEdit ? 'Edit Class' : 'Add New Class',
+                    style: AppTypography.headlineMedium.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    isEdit
+                        ? 'Update class information'
+                        : 'Fill in the details to add a new class',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: Colors.white.withValues(alpha: 0.9),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon, bool isDark) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          decoration: BoxDecoration(
+            color: AppColors.dashboardClasses.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+          ),
+          child: Icon(
+            icon,
+            size: 20,
+            color: AppColors.dashboardClasses,
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Text(
+          title,
+          style: AppTypography.titleLarge.copyWith(
+            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 }

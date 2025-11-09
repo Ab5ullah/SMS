@@ -27,7 +27,8 @@ class School {
     // Parse expiry date - handle both string and Timestamp
     DateTime parsedExpiryDate;
     try {
-      if (map['expiryDate'] == null) {
+      if (map['expiryDate'] == null || (map['expiryDate'] is String && (map['expiryDate'] as String).trim().isEmpty)) {
+        // If null or empty string, default to 1 year from now
         parsedExpiryDate = DateTime.now().add(const Duration(days: 365));
       } else if (map['expiryDate'] is String) {
         // Try to parse string date

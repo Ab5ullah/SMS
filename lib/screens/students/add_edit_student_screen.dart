@@ -4,6 +4,10 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/student.dart';
 import '../../utils/helpers.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_typography.dart';
+import '../../widgets/custom_widgets.dart';
 
 class AddEditStudentScreen extends StatefulWidget {
   final Student? student;
@@ -137,165 +141,353 @@ class _AddEditStudentScreenState extends State<AddEditStudentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isEdit = widget.student != null;
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.student == null ? 'Add Student' : 'Edit Student'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Student Name',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter student name';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _fatherNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Father Name',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person_outline),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter father name';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _classNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Class',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.class_),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Required';
-                        }
-                        return null;
-                      },
+      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+      body: Column(
+        children: [
+          // Modern Header
+          _buildModernHeader(isDark, isEdit),
+          // Form Content
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 800),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Personal Information Section
+                        _buildSectionHeader(
+                          'Personal Information',
+                          Icons.person_rounded,
+                          isDark,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        CustomCard(
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            child: Column(
+                              children: [
+                                CustomTextField(
+                                  controller: _nameController,
+                                  label: 'Student Name',
+                                  hint: 'Enter student full name',
+                                  prefixIcon: Icons.person_rounded,
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Please enter student name';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                CustomTextField(
+                                  controller: _fatherNameController,
+                                  label: 'Father Name',
+                                  hint: 'Enter father full name',
+                                  prefixIcon: Icons.person_outline_rounded,
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Please enter father name';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                CustomTextField(
+                                  controller: _contactController,
+                                  label: 'Contact Number',
+                                  hint: 'Enter contact number',
+                                  prefixIcon: Icons.phone_rounded,
+                                  keyboardType: TextInputType.phone,
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Please enter contact number';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                CustomTextField(
+                                  controller: _addressController,
+                                  label: 'Address',
+                                  hint: 'Enter complete address',
+                                  prefixIcon: Icons.location_on_rounded,
+                                  maxLines: 3,
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Please enter address';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xl),
+
+                        // Academic Information Section
+                        _buildSectionHeader(
+                          'Academic Information',
+                          Icons.school_rounded,
+                          isDark,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        CustomCard(
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: CustomTextField(
+                                        controller: _classNameController,
+                                        label: 'Class',
+                                        hint: 'e.g., 9th, 10th',
+                                        prefixIcon: Icons.class_rounded,
+                                        validator: (value) {
+                                          if (value == null || value.trim().isEmpty) {
+                                            return 'Required';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppSpacing.md),
+                                    Expanded(
+                                      child: CustomTextField(
+                                        controller: _sectionController,
+                                        label: 'Section',
+                                        hint: 'e.g., A, B',
+                                        prefixIcon: Icons.label_rounded,
+                                        validator: (value) {
+                                          if (value == null || value.trim().isEmpty) {
+                                            return 'Required';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                CustomTextField(
+                                  controller: _rollNumberController,
+                                  label: 'Roll Number',
+                                  hint: 'Enter roll number',
+                                  prefixIcon: Icons.numbers_rounded,
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Please enter roll number';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                _buildDatePicker(context, isDark),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xxl),
+
+                        // Action Buttons
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            CustomButton(
+                              text: 'Cancel',
+                              variant: ButtonVariant.ghost,
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            CustomButton(
+                              text: isEdit ? 'Update Student' : 'Add Student',
+                              icon: isEdit ? Icons.check_rounded : Icons.person_add_rounded,
+                              isLoading: _isLoading,
+                              onPressed: _saveStudent,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.lg),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _sectionController,
-                      decoration: const InputDecoration(
-                        labelText: 'Section',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.label),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Required';
-                        }
-                        return null;
-                      },
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModernHeader(bool isDark, bool isEdit) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.dashboardStudents,
+            AppColors.dashboardStudents.withValues(alpha: 0.8),
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Row(
+          children: [
+            CustomButton(
+              text: '',
+              icon: Icons.arrow_back_rounded,
+              variant: ButtonVariant.ghost,
+              onPressed: () => Navigator.pop(context),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              ),
+              child: Icon(
+                isEdit ? Icons.edit_rounded : Icons.person_add_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isEdit ? 'Edit Student' : 'Add New Student',
+                    style: AppTypography.headlineMedium.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    isEdit
+                        ? 'Update student information'
+                        : 'Fill in the details to add a new student',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: Colors.white.withValues(alpha: 0.9),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _rollNumberController,
-                decoration: const InputDecoration(
-                  labelText: 'Roll Number',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.numbers),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter roll number';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _contactController,
-                decoration: const InputDecoration(
-                  labelText: 'Contact Number',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.phone),
-                ),
-                keyboardType: TextInputType.phone,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter contact number';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _addressController,
-                decoration: const InputDecoration(
-                  labelText: 'Address',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.location_on),
-                ),
-                maxLines: 3,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter address';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              InkWell(
-                onTap: () => _selectDate(context),
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Admission Date',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.calendar_today),
-                  ),
-                  child: Text(
-                    Helpers.formatDate(_admissionDate),
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _saveStudent,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(
-                        widget.student == null ? 'Add Student' : 'Update Student',
-                        style: const TextStyle(fontSize: 16),
-                      ),
-              ),
-            ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon, bool isDark) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          decoration: BoxDecoration(
+            color: AppColors.dashboardStudents.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
           ),
+          child: Icon(
+            icon,
+            size: 20,
+            color: AppColors.dashboardStudents,
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Text(
+          title,
+          style: AppTypography.titleLarge.copyWith(
+            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDatePicker(BuildContext context, bool isDark) {
+    return InkWell(
+      onTap: () => _selectDate(context),
+      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          border: Border.all(
+            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: AppColors.dashboardStudents.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+              ),
+              child: Icon(
+                Icons.calendar_today_rounded,
+                size: 20,
+                color: AppColors.dashboardStudents,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Admission Date',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    Helpers.formatDate(_admissionDate),
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
+            ),
+          ],
         ),
       ),
     );

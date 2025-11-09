@@ -4,6 +4,10 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/attendance.dart';
 import '../../utils/helpers.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_typography.dart';
+import '../../widgets/custom_widgets.dart';
 import 'mark_attendance_screen.dart';
 
 class AttendanceScreen extends StatefulWidget {
@@ -17,6 +21,15 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   DateTime _selectedDate = DateTime.now();
   String _selectedClass = '';
   String _selectedSection = '';
+  final TextEditingController _classController = TextEditingController();
+  final TextEditingController _sectionController = TextEditingController();
+
+  @override
+  void dispose() {
+    _classController.dispose();
+    _sectionController.dispose();
+    super.dispose();
+  }
 
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -24,6 +37,22 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       initialDate: _selectedDate,
       firstDate: DateTime(2000),
       lastDate: DateTime.now(),
+      builder: (context, child) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppColors.dashboardAttendance,
+              onPrimary: Colors.white,
+              surface: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+              onSurface: isDark
+                  ? AppColors.textPrimaryDark
+                  : AppColors.textPrimaryLight,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null && picked != _selectedDate) {
       setState(() {
@@ -36,110 +65,67 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final schoolId = authProvider.currentSchool?.id ?? '';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Attendance Management'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_task),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MarkAttendanceScreen(),
-                ),
-              );
-            },
-            tooltip: 'Mark Attendance',
-          ),
-        ],
-      ),
+      backgroundColor: isDark
+          ? AppColors.backgroundDark
+          : AppColors.backgroundLight,
       body: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: Colors.grey[100],
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => _selectDate(context),
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'Date',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.calendar_today),
-                          ),
-                          child: Text(
-                            Helpers.formatDate(_selectedDate),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextField(
-                        decoration: const InputDecoration(
-                          labelText: 'Class',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.class_),
-                          hintText: 'e.g., 1',
-                        ),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedClass = value;
-                          });
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextField(
-                        decoration: const InputDecoration(
-                          labelText: 'Section',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.label),
-                          hintText: 'e.g., A',
-                        ),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedSection = value;
-                          });
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          // Modern Header
+          _buildModernHeader(isDark),
+          // Content
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('attendance')
                   .where('schoolId', isEqualTo: schoolId)
-                  .where('date',
-                      isEqualTo: DateTime(_selectedDate.year, _selectedDate.month,
-                              _selectedDate.day)
-                          .toIso8601String())
+                  .where(
+                    'date',
+                    isEqualTo: DateTime(
+                      _selectedDate.year,
+                      _selectedDate.month,
+                      _selectedDate.day,
+                    ).toIso8601String(),
+                  )
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline_rounded,
+                          size: 64,
+                          color: AppColors.errorLight,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        Text(
+                          'Error: ${snapshot.error}',
+                          style: AppTypography.bodyLarge.copyWith(
+                            color: AppColors.errorLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
                 }
 
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const LoadingWidget(
+                    message: 'Loading attendance records...',
+                  );
                 }
 
                 var attendanceRecords = snapshot.data!.docs
-                    .map((doc) => Attendance.fromMap(
-                          doc.data() as Map<String, dynamic>,
-                          doc.id,
-                        ))
+                    .map(
+                      (doc) => Attendance.fromMap(
+                        doc.data() as Map<String, dynamic>,
+                        doc.id,
+                      ),
+                    )
                     .toList();
 
                 // Filter by class and section if selected
@@ -155,134 +141,81 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 }
 
                 if (attendanceRecords.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.fact_check_outlined,
-                          size: 80,
-                          color: Colors.grey[400],
+                  return ModernEmptyState(
+                    icon: Icons.fact_check_outlined,
+                    title: 'No Attendance Records',
+                    subtitle:
+                        'No attendance records found for the selected filters',
+                    actionText: 'Mark Attendance',
+                    onAction: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const MarkAttendanceScreen(),
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No attendance records found',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const MarkAttendanceScreen(),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.add_task),
-                          label: const Text('Mark Attendance'),
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   );
                 }
 
                 // Calculate statistics
-                final present =
-                    attendanceRecords.where((a) => a.status == 'present').length;
-                final absent =
-                    attendanceRecords.where((a) => a.status == 'absent').length;
-                final leave =
-                    attendanceRecords.where((a) => a.status == 'leave').length;
+                final present = attendanceRecords
+                    .where((a) => a.status == 'present')
+                    .length;
+                final absent = attendanceRecords
+                    .where((a) => a.status == 'absent')
+                    .length;
+                final leave = attendanceRecords
+                    .where((a) => a.status == 'leave')
+                    .length;
 
                 return Column(
                   children: [
+                    // Statistics Cards
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(AppSpacing.md),
                       child: Row(
                         children: [
                           Expanded(
                             child: _buildStatCard(
                               'Present',
                               present.toString(),
-                              Colors.green,
+                              Icons.check_circle_rounded,
+                              AppColors.statusPresent,
+                              isDark,
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: _buildStatCard(
                               'Absent',
                               absent.toString(),
-                              Colors.red,
+                              Icons.cancel_rounded,
+                              AppColors.statusAbsent,
+                              isDark,
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: _buildStatCard(
                               'Leave',
                               leave.toString(),
-                              Colors.orange,
+                              Icons.access_time_rounded,
+                              AppColors.statusLeave,
+                              isDark,
                             ),
                           ),
                         ],
                       ),
                     ),
+                    // Attendance List
                     Expanded(
                       child: ListView.builder(
                         itemCount: attendanceRecords.length,
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(AppSpacing.md),
                         itemBuilder: (context, index) {
                           final attendance = attendanceRecords[index];
-                          Color statusColor;
-                          IconData statusIcon;
-
-                          switch (attendance.status) {
-                            case 'present':
-                              statusColor = Colors.green;
-                              statusIcon = Icons.check_circle;
-                              break;
-                            case 'absent':
-                              statusColor = Colors.red;
-                              statusIcon = Icons.cancel;
-                              break;
-                            case 'leave':
-                              statusColor = Colors.orange;
-                              statusIcon = Icons.access_time;
-                              break;
-                            default:
-                              statusColor = Colors.grey;
-                              statusIcon = Icons.help;
-                          }
-
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: statusColor,
-                                child: Icon(statusIcon, color: Colors.white),
-                              ),
-                              title: Text(
-                                'Student ID: ${attendance.studentId}',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const SizedBox(height: 4),
-                                  Text(
-                                      'Class: ${attendance.className} - ${attendance.section}'),
-                                  Text('Status: ${attendance.status.toUpperCase()}'),
-                                  if (attendance.remarks != null)
-                                    Text('Remarks: ${attendance.remarks}'),
-                                ],
-                              ),
-                              isThreeLine: true,
-                            ),
-                          );
+                          return _buildAttendanceCard(attendance, isDark);
                         },
                       ),
                     ),
@@ -293,30 +226,461 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           ),
         ],
       ),
+
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const MarkAttendanceScreen(),
+            ),
+          );
+        },
+        icon: const Icon(Icons.add_task_rounded),
+        label: const Text('Mark Attendance'),
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8), // use 0 for sharp corners
+        ),
+      ),
     );
   }
 
-  Widget _buildStatCard(String title, String value, Color color) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+  Widget _buildModernHeader(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Title and Subtitle
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.dashboardAttendance,
+                      AppColors.dashboardAttendance.withValues(alpha: 0.7),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                ),
+                child: Icon(
+                  Icons.fact_check_rounded,
+                  color: Colors.white,
+                  size: AppSpacing.iconSizeLg,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Attendance Management',
+                      style: AppTypography.headlineMedium.copyWith(
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Track and manage student attendance records',
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          // Filters
+          Row(
+            children: [
+              // Date Picker
+              Expanded(
+                child: InkWell(
+                  onTap: () => _selectDate(context),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: 04,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? AppColors.surfaceDark
+                          : AppColors.surfaceLight,
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                      border: Border.all(
+                        color: isDark
+                            ? AppColors.borderDark
+                            : AppColors.borderLight,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today_rounded,
+                          size: 20,
+                          color: AppColors.dashboardAttendance,
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Date',
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: isDark
+                                      ? AppColors.textSecondaryDark
+                                      : AppColors.textSecondaryLight,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                Helpers.formatDate(_selectedDate),
+                                style: AppTypography.bodyMedium.copyWith(
+                                  color: isDark
+                                      ? AppColors.textPrimaryDark
+                                      : AppColors.textPrimaryLight,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              // Class Filter
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  ),
+                  child: TextField(
+                    controller: _classController,
+                    style: AppTypography.bodyMedium,
+                    decoration: InputDecoration(
+                      labelText: 'Class',
+                      hintText: 'e.g., 1',
+                      prefixIcon: Icon(
+                        Icons.class_rounded,
+                        color: AppColors.dashboardAttendance,
+                      ),
+                      filled: true,
+                      fillColor: isDark
+                          ? AppColors.surfaceDark
+                          : AppColors.surfaceLight,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusMd,
+                        ),
+                        borderSide: BorderSide(
+                          color: isDark
+                              ? AppColors.borderDark
+                              : AppColors.borderLight,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusMd,
+                        ),
+                        borderSide: BorderSide(
+                          color: isDark
+                              ? AppColors.borderDark
+                              : AppColors.borderLight,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusMd,
+                        ),
+                        borderSide: BorderSide(
+                          color: AppColors.dashboardAttendance,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedClass = value.trim();
+                      });
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              // Section Filter
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  ),
+                  child: TextField(
+                    controller: _sectionController,
+                    style: AppTypography.bodyMedium,
+                    decoration: InputDecoration(
+                      labelText: 'Section',
+                      hintText: 'e.g., A',
+                      prefixIcon: Icon(
+                        Icons.label_rounded,
+                        color: AppColors.dashboardAttendance,
+                      ),
+                      filled: true,
+                      fillColor: isDark
+                          ? AppColors.surfaceDark
+                          : AppColors.surfaceLight,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusMd,
+                        ),
+                        borderSide: BorderSide(
+                          color: isDark
+                              ? AppColors.borderDark
+                              : AppColors.borderLight,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusMd,
+                        ),
+                        borderSide: BorderSide(
+                          color: isDark
+                              ? AppColors.borderDark
+                              : AppColors.borderLight,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusMd,
+                        ),
+                        borderSide: BorderSide(
+                          color: AppColors.dashboardAttendance,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedSection = value.trim();
+                      });
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+    bool isDark,
+  ) {
+    return CustomCard(
+      hoverable: false,
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: AppSpacing.iconSizeLg),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            value,
+            style: AppTypography.numericLarge.copyWith(
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            title,
+            style: AppTypography.labelMedium.copyWith(
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAttendanceCard(Attendance attendance, bool isDark) {
+    Color statusColor;
+    IconData statusIcon;
+    String statusText;
+
+    switch (attendance.status) {
+      case 'present':
+        statusColor = AppColors.statusPresent;
+        statusIcon = Icons.check_circle_rounded;
+        statusText = 'Present';
+        break;
+      case 'absent':
+        statusColor = AppColors.statusAbsent;
+        statusIcon = Icons.cancel_rounded;
+        statusText = 'Absent';
+        break;
+      case 'leave':
+        statusColor = AppColors.statusLeave;
+        statusIcon = Icons.access_time_rounded;
+        statusText = 'Leave';
+        break;
+      default:
+        statusColor = Colors.grey;
+        statusIcon = Icons.help_rounded;
+        statusText = 'Unknown';
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: CustomCard(
+        child: Row(
           children: [
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: color,
+            // Status Icon
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                border: Border.all(
+                  color: statusColor.withValues(alpha: 0.3),
+                  width: 2,
+                ),
+              ),
+              child: Icon(
+                statusIcon,
+                color: statusColor,
+                size: AppSpacing.iconSizeLg,
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 12),
+            const SizedBox(width: AppSpacing.md),
+            // Attendance Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Student ID: ${attendance.studentId}',
+                    style: AppTypography.titleMedium.copyWith(
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      _buildInfoChip(
+                        icon: Icons.class_rounded,
+                        label:
+                            '${attendance.className} - ${attendance.section}',
+                        color: AppColors.dashboardClasses,
+                        isDark: isDark,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      _buildInfoChip(
+                        icon: statusIcon,
+                        label: statusText,
+                        color: statusColor,
+                        isDark: isDark,
+                      ),
+                    ],
+                  ),
+                  if (attendance.remarks != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.note_rounded,
+                          size: 14,
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            attendance.remarks!,
+                            style: AppTypography.bodySmall.copyWith(
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildInfoChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required bool isDark,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 4,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: AppTypography.labelSmall.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

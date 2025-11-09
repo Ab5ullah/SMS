@@ -50,175 +50,181 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Colors.grey[100],
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Scaffold(
+      backgroundColor: Colors.grey[100],
+      body: SafeArea(
+        child: SizedBox.expand(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Reports & Export',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Generate and export reports in PDF or Excel format',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Report Type Selection
-            Card(
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Select Report Type',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
+                    const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildReportTypeChip(
-                          'students',
-                          'Student List',
-                          Icons.people,
-                          Colors.blue,
+                        Text(
+                          'Reports & Export',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        _buildReportTypeChip(
-                          'teachers',
-                          'Teacher List',
-                          Icons.person,
-                          Colors.green,
-                        ),
-                        _buildReportTypeChip(
-                          'attendance',
-                          'Attendance Report',
-                          Icons.fact_check,
-                          Colors.orange,
-                        ),
-                        _buildReportTypeChip(
-                          'fees',
-                          'Fee Collection',
-                          Icons.payment,
-                          Colors.purple,
-                        ),
-                        _buildReportTypeChip(
-                          'exams',
-                          'Exam Results',
-                          Icons.assignment,
-                          Colors.red,
+                        SizedBox(height: 4),
+                        Text(
+                          'Generate and export reports in PDF or Excel format',
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
                         ),
                       ],
                     ),
                   ],
                 ),
-              ),
-            ),
-            const SizedBox(height: 16),
+                const SizedBox(height: 24),
 
-            // Filters Section
-            Card(
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Filters',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildFiltersForReportType(),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Action Buttons
-            Card(
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _isGenerating ? null : () => _generateReport('pdf'),
-                        icon: const Icon(Icons.picture_as_pdf),
-                        label: const Text('Generate PDF'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
+                // Report Type Selection
+                Card(
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Select Report Type',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _isGenerating || !_supportsExcel()
-                            ? null
-                            : () => _generateReport('excel'),
-                        icon: const Icon(Icons.table_chart),
-                        label: const Text('Export to Excel'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
+                        const SizedBox(height: 16),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            _buildReportTypeChip(
+                              'students',
+                              'Student List',
+                              Icons.people,
+                              Colors.blue,
+                            ),
+                            _buildReportTypeChip(
+                              'teachers',
+                              'Teacher List',
+                              Icons.person,
+                              Colors.green,
+                            ),
+                            _buildReportTypeChip(
+                              'attendance',
+                              'Attendance Report',
+                              Icons.fact_check,
+                              Colors.orange,
+                            ),
+                            _buildReportTypeChip(
+                              'fees',
+                              'Fee Collection',
+                              Icons.payment,
+                              Colors.purple,
+                            ),
+                            _buildReportTypeChip(
+                              'exams',
+                              'Exam Results',
+                              Icons.assignment,
+                              Colors.red,
+                            ),
+                          ],
                         ),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
+                const SizedBox(height: 16),
 
-            if (_isGenerating)
-              const Padding(
-                padding: EdgeInsets.only(top: 16),
-                child: Center(
-                  child: CircularProgressIndicator(),
+                // Filters Section
+                Card(
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Filters',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildFiltersForReportType(),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-          ],
+                const SizedBox(height: 16),
+
+                // Action Buttons
+                Card(
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _isGenerating
+                                ? null
+                                : () => _generateReport('pdf'),
+                            icon: const Icon(Icons.picture_as_pdf),
+                            label: const Text('Generate PDF'),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _isGenerating || !_supportsExcel()
+                                ? null
+                                : () => _generateReport('excel'),
+                            icon: const Icon(Icons.table_chart),
+                            label: const Text('Export to Excel'),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                if (_isGenerating)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 16),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildReportTypeChip(String value, String label, IconData icon, Color color) {
+  Widget _buildReportTypeChip(
+    String value,
+    String label,
+    IconData icon,
+    Color color,
+  ) {
     final isSelected = _selectedReportType == value;
     return FilterChip(
       selected: isSelected,
@@ -274,10 +280,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
             value: _selectedClass,
             items: [
               const DropdownMenuItem(value: null, child: Text('All Classes')),
-              ..._classes.map((c) => DropdownMenuItem(
-                    value: c.className,
-                    child: Text(c.className),
-                  )),
+              ..._classes.map(
+                (c) => DropdownMenuItem(
+                  value: c.className,
+                  child: Text(c.className),
+                ),
+              ),
             ],
             onChanged: (value) {
               setState(() {
@@ -301,10 +309,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
               if (_selectedClass != null)
                 ..._classes
                     .where((c) => c.className == _selectedClass)
-                    .map((c) => DropdownMenuItem(
-                          value: c.section,
-                          child: Text(c.section),
-                        )),
+                    .map(
+                      (c) => DropdownMenuItem(
+                        value: c.section,
+                        child: Text(c.section),
+                      ),
+                    ),
             ],
             onChanged: (value) {
               setState(() {
@@ -320,9 +330,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget _buildAttendanceFilter() {
     return Row(
       children: [
-        Expanded(
-          child: _buildClassSectionFilter(),
-        ),
+        Expanded(child: _buildClassSectionFilter()),
         const SizedBox(width: 16),
         Expanded(
           child: InkWell(
@@ -360,8 +368,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Widget _buildFeeFilter() {
     final months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
 
     return Row(
@@ -471,7 +489,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
       Helpers.showSnackBar(context, 'Report generated successfully!');
     } catch (e) {
       if (!mounted) return;
-      Helpers.showSnackBar(context, 'Error generating report: $e', isError: true);
+      Helpers.showSnackBar(
+        context,
+        'Error generating report: $e',
+        isError: true,
+      );
     } finally {
       setState(() {
         _isGenerating = false;
@@ -479,7 +501,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
   }
 
-  Future<void> _generateStudentReport(String schoolId, school, String format) async {
+  Future<void> _generateStudentReport(
+    String schoolId,
+    school,
+    String format,
+  ) async {
     List<Student> students = await _firestoreService.getStudents(schoolId);
 
     // Apply filters
@@ -508,15 +534,25 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
   }
 
-  Future<void> _generateTeacherReport(String schoolId, school, String format) async {
+  Future<void> _generateTeacherReport(
+    String schoolId,
+    school,
+    String format,
+  ) async {
     // Similar implementation for teachers
     if (!mounted) return;
     Helpers.showSnackBar(context, 'Teacher report generation coming soon!');
   }
 
-  Future<void> _generateAttendanceReport(String schoolId, school, String format) async {
-    List<Attendance> attendance =
-        await _firestoreService.getAttendance(schoolId, _selectedDate);
+  Future<void> _generateAttendanceReport(
+    String schoolId,
+    school,
+    String format,
+  ) async {
+    List<Attendance> attendance = await _firestoreService.getAttendance(
+      schoolId,
+      _selectedDate,
+    );
     List<Student> students = await _firestoreService.getStudents(schoolId);
 
     // Create attendance data with student details
@@ -571,7 +607,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  Future<void> _generateFeeReport(String schoolId, school, String format) async {
+  Future<void> _generateFeeReport(
+    String schoolId,
+    school,
+    String format,
+  ) async {
     List<Fee> fees = await _firestoreService.getFees(schoolId);
 
     // Apply filters

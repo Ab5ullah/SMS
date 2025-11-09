@@ -104,10 +104,15 @@ class AppColors {
   // ============ MODULE-SPECIFIC COLORS ============
 
   // Dashboard
-  static const Color dashboardStudents = Color(0xFF3B82F6); // Blue
-  static const Color dashboardTeachers = Color(0xFF8B5CF6); // Violet
-  static const Color dashboardClasses = Color(0xFF10B981); // Green
-  static const Color dashboardAttendance = Color(0xFFF59E0B); // Amber
+  static const Color dashboardStudents = Color(0xFF3B82F6); // Blue 500
+  static const Color dashboardTeachers = Color(0xFF8B5CF6); // Violet 500
+  static const Color dashboardClasses = Color(0xFF10B981); // Green 500
+  static const Color dashboardAttendance = Color(
+    0xFF06B6D4,
+  ); // Cyan 500 (Changed from Amber)
+  static const Color dashboardFees = Color(0xFF3B82F6); // Pink 500
+  static const Color dashboardExams = Color(0xFF6366F1); // Indigo 500
+  static const Color dashboardReports = Color(0xFFF97316); // Orange 500
 
   // Status Colors
   static const Color statusPaid = Color(0xFF10B981); // Green

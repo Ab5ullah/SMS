@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 import 'providers/auth_provider.dart';
 import 'screens/splash_screen.dart';
+import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -65,10 +66,9 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'School Management System',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF673AB7)),
-          useMaterial3: true,
-        ),
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.light, // Can be changed to ThemeMode.system or ThemeMode.dark
         home: const SplashScreen(),
       ),
     );

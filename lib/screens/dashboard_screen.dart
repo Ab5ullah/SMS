@@ -4,6 +4,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/auth_provider.dart';
 import '../services/statistics_service.dart';
 import '../utils/helpers.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
+import '../widgets/custom_widgets.dart';
 import 'login_screen.dart';
 import 'students/students_screen.dart';
 import 'teachers/teachers_screen.dart';
@@ -30,43 +34,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final List<_NavItem> _navItems = [
     _NavItem(
       title: 'Dashboard',
-      icon: Icons.dashboard,
-      color: Colors.blue,
+      icon: Icons.dashboard_rounded,
+      color: AppColors.dashboardStudents,
     ),
     _NavItem(
       title: 'Students',
-      icon: Icons.people,
-      color: Colors.green,
+      icon: Icons.people_rounded,
+      color: AppColors.dashboardStudents,
     ),
     _NavItem(
       title: 'Teachers',
-      icon: Icons.person,
-      color: Colors.orange,
+      icon: Icons.person_rounded,
+      color: AppColors.dashboardTeachers,
     ),
     _NavItem(
       title: 'Classes',
-      icon: Icons.class_,
-      color: Colors.purple,
+      icon: Icons.class_rounded,
+      color: AppColors.dashboardClasses,
     ),
     _NavItem(
       title: 'Attendance',
-      icon: Icons.fact_check,
-      color: Colors.teal,
+      icon: Icons.fact_check_rounded,
+      color: AppColors.dashboardAttendance,
     ),
     _NavItem(
       title: 'Fees',
-      icon: Icons.payment,
-      color: Colors.red,
+      icon: Icons.payments_rounded,
+      color: AppColors.statusPaid,
     ),
     _NavItem(
       title: 'Exams',
-      icon: Icons.assignment,
-      color: Colors.indigo,
+      icon: Icons.assignment_rounded,
+      color: AppColors.secondaryLight,
     ),
     _NavItem(
       title: 'Reports',
-      icon: Icons.bar_chart,
-      color: Colors.brown,
+      icon: Icons.bar_chart_rounded,
+      color: AppColors.infoLight,
     ),
   ];
 
@@ -107,23 +111,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _handleLogout() async {
-    bool confirm = await Helpers.showConfirmDialog(
-      context,
+    bool? confirm = await CustomDialog.showConfirmation(
+      context: context,
       title: 'Logout',
       message: 'Are you sure you want to logout?',
       confirmText: 'Logout',
+      isDanger: true,
     );
 
-    if (!confirm) return;
+    if (confirm != true) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     await authProvider.signOut();
 
     if (!mounted) return;
 
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-    );
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
   }
 
   @override
@@ -133,216 +138,319 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final user = authProvider.currentUser;
 
     if (school == null || user == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final primaryColor = Helpers.parseColor(school.primaryColor);
-    final secondaryColor = Helpers.parseColor(school.secondaryColor);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Theme(
-      data: ThemeData(
-        primaryColor: primaryColor,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: primaryColor,
-          secondary: secondaryColor,
-        ),
-        useMaterial3: true,
+    return Scaffold(
+      body: Row(
+        children: [
+          // Modern Sidebar
+          _buildModernSidebar(school, user, primaryColor, isDark),
+          // Main Content
+          Expanded(child: _buildMainContent()),
+        ],
       ),
-      child: Scaffold(
-        body: Row(
-          children: [
-            // Sidebar
-            Container(
-              width: 250,
-              decoration: BoxDecoration(
-                color: primaryColor,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 10,
-                  ),
-                ],
+    );
+  }
+
+  Widget _buildModernSidebar(school, user, Color primaryColor, bool isDark) {
+    return Container(
+      width: AppSpacing.sidebarWidth,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [primaryColor, Color.lerp(primaryColor, Colors.black, 0.2)!],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(2, 0),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // School Header
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            width: AppSpacing.sidebarWidth,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.1),
+              border: Border(
+                bottom: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
               ),
-              child: Column(
-                children: [
-                  // School Logo and Name
+            ),
+            child: Column(
+              children: [
+                if (school.logoUrl.isNotEmpty)
                   Container(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
-                    ),
-                    child: Column(
-                      children: [
-                        if (school.logoUrl.isNotEmpty)
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(50),
-                            child: CachedNetworkImage(
-                              imageUrl: school.logoUrl,
-                              height: 80,
-                              width: 80,
-                              fit: BoxFit.cover,
-                              placeholder: (context, url) =>
-                                  const CircularProgressIndicator(
-                                color: Colors.white,
-                              ),
-                              errorWidget: (context, url, error) => Container(
-                                height: 80,
-                                width: 80,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(50),
-                                ),
-                                child: const Icon(
-                                  Icons.school,
-                                  size: 40,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          )
-                        else
-                          Container(
-                            height: 80,
-                            width: 80,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(50),
-                            ),
-                            child: const Icon(
-                              Icons.school,
-                              size: 40,
-                              color: Colors.white,
-                            ),
-                          ),
-                        const SizedBox(height: 12),
-                        Text(
-                          school.name,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          user.role.toUpperCase(),
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.8),
-                            fontSize: 12,
-                          ),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.radiusFull,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  // Navigation Items
-                  Expanded(
-                    child: ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      itemCount: _navItems.length,
-                      itemBuilder: (context, index) {
-                        final item = _navItems[index];
-                        final isSelected = _selectedIndex == index;
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: ListTile(
-                            selected: isSelected,
-                            selectedTileColor: Colors.white.withValues(alpha: 0.2),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            leading: Icon(
-                              item.icon,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.radiusFull,
+                      ),
+                      child: CachedNetworkImage(
+                        imageUrl: school.logoUrl,
+                        height: AppSpacing.avatarSizeXl,
+                        width: AppSpacing.avatarSizeXl,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) =>
+                            const CircularProgressIndicator(
                               color: Colors.white,
                             ),
-                            title: Text(
-                              item.title,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                              ),
+                        errorWidget: (context, url, error) => Container(
+                          height: AppSpacing.avatarSizeXl,
+                          width: AppSpacing.avatarSizeXl,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(
+                              AppSpacing.radiusFull,
                             ),
-                            onTap: () {
-                              setState(() {
-                                _selectedIndex = index;
-                              });
-                            },
                           ),
-                        );
-                      },
-                    ),
-                  ),
-                  // User Info and Logout
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        top: BorderSide(
-                          color: Colors.white.withValues(alpha: 0.2),
+                          child: const Icon(
+                            Icons.school_rounded,
+                            size: 40,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
-                    child: Column(
-                      children: [
-                        ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: Colors.white.withValues(alpha: 0.2),
-                            child: Text(
-                              user.name.isNotEmpty
-                                  ? user.name[0].toUpperCase()
-                                  : 'U',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          title: Text(
-                            user.name,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          subtitle: Text(
-                            user.email,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.7),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: _handleLogout,
-                            icon: const Icon(Icons.logout, color: Colors.white),
-                            label: const Text(
-                              'Logout',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Colors.white),
-                            ),
-                          ),
-                        ),
-                      ],
+                  )
+                else
+                  Container(
+                    height: AppSpacing.avatarSizeXl,
+                    width: AppSpacing.avatarSizeXl,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.radiusFull,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.school_rounded,
+                      size: 40,
+                      color: Colors.white,
                     ),
                   ),
-                ],
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  school.name,
+                  style: AppTypography.titleMedium.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                  ),
+                  child: Text(
+                    user.role.toUpperCase(),
+                    style: AppTypography.labelSmall.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          // Navigation Items
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+              itemCount: _navItems.length,
+              itemBuilder: (context, index) {
+                final item = _navItems[index];
+                final isSelected = _selectedIndex == index;
+                return _buildNavItem(item, isSelected, index);
+              },
+            ),
+          ),
+          // User Profile Section
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
               ),
             ),
-            // Main Content
-            Expanded(
-              child: _buildMainContent(),
+            child: Column(
+              children: [
+                _buildUserProfile(user),
+                const SizedBox(height: AppSpacing.sm),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _handleLogout,
+                    icon: const Icon(Icons.logout_rounded, size: 18),
+                    label: const Text('Logout'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white.withValues(alpha: 0.1),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.sm,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusMd,
+                        ),
+                        side: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.3),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem(_NavItem item, bool isSelected, int index) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? Colors.white.withValues(alpha: 0.2)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              border: Border.all(
+                color: isSelected
+                    ? Colors.white.withValues(alpha: 0.3)
+                    : Colors.transparent,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  item.icon,
+                  color: Colors.white,
+                  size: AppSpacing.iconSizeMd,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    item.title,
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: Colors.white,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.normal,
+                    ),
+                  ),
+                ),
+                if (isSelected)
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildUserProfile(user) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: Colors.white.withValues(alpha: 0.3),
+            radius: 20,
+            child: Text(
+              user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',
+              style: AppTypography.titleMedium.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  user.name,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  user.email,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: Colors.white.withValues(alpha: 0.7),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -373,235 +481,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildDashboardContent() {
     final authProvider = Provider.of<AuthProvider>(context);
     final school = authProvider.currentSchool!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      color: Colors.grey[100],
+      color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Dashboard',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Welcome back! Here\'s your school overview',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
+            // Modern Header
+            _buildDashboardHeader(school, isDark),
+            const SizedBox(height: AppSpacing.xl),
+            // Stats Grid
+            if (_isLoadingStats)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(AppSpacing.xl),
+                  child: LoadingWidget(message: 'Loading statistics...'),
                 ),
-                // License Status Badge
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: school.isLicenseActive
-                        ? Colors.green.withValues(alpha: 0.1)
-                        : Colors.red.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: school.isLicenseActive
-                          ? Colors.green
-                          : Colors.red,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        school.isLicenseActive
-                            ? Icons.check_circle
-                            : Icons.warning,
-                        color: school.isLicenseActive
-                            ? Colors.green
-                            : Colors.red,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        school.isLicenseActive
-                            ? 'License Active'
-                            : 'License Expired',
-                        style: TextStyle(
-                          color: school.isLicenseActive
-                              ? Colors.green
-                              : Colors.red,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            // Stats Cards
-            _isLoadingStats
-                ? const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(40),
-                      child: CircularProgressIndicator(),
-                    ),
-                  )
-                : GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 4,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 1.5,
-                    children: [
-                      _buildStatCard(
-                        title: 'Total Students',
-                        value: '${_statistics?['totalStudents'] ?? 0}',
-                        icon: Icons.people,
-                        color: Colors.blue,
-                      ),
-                      _buildStatCard(
-                        title: 'Total Teachers',
-                        value: '${_statistics?['totalTeachers'] ?? 0}',
-                        icon: Icons.person,
-                        color: Colors.green,
-                      ),
-                      _buildStatCard(
-                        title: 'Fees Collected',
-                        value:
-                            'Rs. ${(_statistics?['totalFeesCollected'] ?? 0).toStringAsFixed(0)}',
-                        icon: Icons.payment,
-                        color: Colors.orange,
-                      ),
-                      _buildStatCard(
-                        title: 'Attendance Today',
-                        value:
-                            '${(_statistics?['attendancePercentage'] ?? 0).toStringAsFixed(1)}%',
-                        icon: Icons.fact_check,
-                        color: Colors.purple,
-                      ),
-                    ],
-                  ),
-            const SizedBox(height: 24),
-            // Recent Activities
+              )
+            else
+              _buildStatsGrid(),
+            const SizedBox(height: AppSpacing.xl),
+            // Recent Activities & Quick Actions
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  flex: 2,
-                  child: Card(
-                    elevation: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Recent Activities',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.refresh),
-                                onPressed: _loadStatistics,
-                                tooltip: 'Refresh',
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          if (_recentActivities.isEmpty)
-                            _buildActivityItem(
-                              'No recent activities',
-                              Icons.info,
-                              Colors.grey,
-                              null,
-                            )
-                          else
-                            ..._recentActivities.take(5).map((activity) =>
-                                _buildActivityItem(
-                                  activity['message'] as String,
-                                  _getIconData(activity['icon'] as String),
-                                  Colors.blue,
-                                  activity['time'] as DateTime,
-                                )),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Card(
-                    elevation: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Quick Actions',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          _buildQuickAction(
-                            'Add Student',
-                            Icons.person_add,
-                            Colors.blue,
-                            () {
-                              setState(() {
-                                _selectedIndex = 1;
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 8),
-                          _buildQuickAction(
-                            'Mark Attendance',
-                            Icons.fact_check,
-                            Colors.green,
-                            () {
-                              setState(() {
-                                _selectedIndex = 4;
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 8),
-                          _buildQuickAction(
-                            'Record Fee',
-                            Icons.payment,
-                            Colors.orange,
-                            () {
-                              setState(() {
-                                _selectedIndex = 5;
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                Expanded(flex: 2, child: _buildRecentActivities(isDark)),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(child: _buildQuickActions(isDark)),
               ],
             ),
           ],
@@ -610,84 +519,344 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildStatCard({
-    required String title,
-    required String value,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+  Widget _buildDashboardHeader(school, bool isDark) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(icon, color: color, size: 24),
-                ),
-              ],
+            Text(
+              'Dashboard',
+              style: AppTypography.headlineLarge.copyWith(
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Welcome back! Here\'s your school overview',
+              style: AppTypography.bodyLarge.copyWith(
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
             ),
           ],
         ),
+        // License Status Badge
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          decoration: BoxDecoration(
+            color: school.isLicenseActive
+                ? AppColors.successLight.withValues(alpha: 0.1)
+                : AppColors.errorLight.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+            border: Border.all(
+              color: school.isLicenseActive
+                  ? AppColors.successLight
+                  : AppColors.errorLight,
+              width: 2,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                school.isLicenseActive
+                    ? Icons.check_circle_rounded
+                    : Icons.warning_rounded,
+                color: school.isLicenseActive
+                    ? AppColors.successLight
+                    : AppColors.errorLight,
+                size: 20,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                school.isLicenseActive ? 'License Active' : 'License Expired',
+                style: AppTypography.labelLarge.copyWith(
+                  color: school.isLicenseActive
+                      ? AppColors.successLight
+                      : AppColors.errorLight,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatsGrid() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount = constraints.maxWidth > 1200 ? 4 : 2;
+        return GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: crossAxisCount,
+          crossAxisSpacing: AppSpacing.md,
+          mainAxisSpacing: AppSpacing.md,
+          childAspectRatio: 1.4,
+          children: [
+            StatsCard(
+              title: 'Total Students',
+              value: '${_statistics?['totalStudents'] ?? 0}',
+              icon: Icons.people_rounded,
+              color: AppColors.dashboardStudents,
+              onTap: () => setState(() => _selectedIndex = 1),
+            ),
+            StatsCard(
+              title: 'Total Teachers',
+              value: '${_statistics?['totalTeachers'] ?? 0}',
+              icon: Icons.person_rounded,
+              color: AppColors.dashboardTeachers,
+              onTap: () => setState(() => _selectedIndex = 2),
+            ),
+            StatsCard(
+              title: 'Fees Collected',
+              value:
+                  'Rs. ${(_statistics?['totalFeesCollected'] ?? 0).toStringAsFixed(0)}',
+              icon: Icons.payments_rounded,
+              color: AppColors.dashboardAttendance,
+              subtitle: 'This month',
+              onTap: () => setState(() => _selectedIndex = 5),
+            ),
+            StatsCard(
+              title: 'Attendance Today',
+              value:
+                  '${(_statistics?['attendancePercentage'] ?? 0).toStringAsFixed(1)}%',
+              icon: Icons.fact_check_rounded,
+              color: AppColors.dashboardClasses,
+              subtitle: _getAttendanceStatus(
+                _statistics?['attendancePercentage'] ?? 0,
+              ),
+              onTap: () => setState(() => _selectedIndex = 4),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  String _getAttendanceStatus(double percentage) {
+    if (percentage >= 90) return 'Excellent';
+    if (percentage >= 75) return 'Good';
+    if (percentage >= 60) return 'Average';
+    return 'Needs attention';
+  }
+
+  Widget _buildRecentActivities(bool isDark) {
+    return CustomCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Recent Activities',
+                style: AppTypography.titleLarge.copyWith(
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh_rounded),
+                onPressed: _loadStatistics,
+                tooltip: 'Refresh',
+                color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          if (_recentActivities.isEmpty)
+            _buildActivityItem(
+              'No recent activities',
+              Icons.info_outline_rounded,
+              isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
+              null,
+              isDark,
+            )
+          else
+            ..._recentActivities
+                .take(6)
+                .map(
+                  (activity) => _buildActivityItem(
+                    activity['message'] as String,
+                    _getIconData(activity['icon'] as String),
+                    AppColors.dashboardStudents,
+                    activity['time'] as DateTime,
+                    isDark,
+                  ),
+                ),
+        ],
       ),
     );
   }
 
   Widget _buildActivityItem(
-      String text, IconData icon, Color color, DateTime? time) {
+    String text,
+    IconData icon,
+    Color color,
+    DateTime? time,
+    bool isDark,
+  ) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  text,
-                  style: const TextStyle(fontSize: 14),
-                ),
-                if (time != null)
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surfaceDark : AppColors.backgroundLight,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    _getTimeAgo(time),
-                    style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                    text,
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
+                    ),
                   ),
-              ],
+                  if (time != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      _getTimeAgo(time),
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActions(bool isDark) {
+    return CustomCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Quick Actions',
+            style: AppTypography.titleLarge.copyWith(
+              color: isDark
+                  ? AppColors.textPrimaryDark
+                  : AppColors.textPrimaryLight,
+              fontWeight: FontWeight.bold,
             ),
           ),
+          const SizedBox(height: AppSpacing.md),
+          _buildQuickActionButton(
+            'Add Student',
+            Icons.person_add_rounded,
+            AppColors.dashboardStudents,
+            () => setState(() => _selectedIndex = 1),
+            isDark,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _buildQuickActionButton(
+            'Mark Attendance',
+            Icons.fact_check_rounded,
+            AppColors.dashboardClasses,
+            () => setState(() => _selectedIndex = 4),
+            isDark,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _buildQuickActionButton(
+            'Record Fee',
+            Icons.payments_rounded,
+            AppColors.dashboardAttendance,
+            () => setState(() => _selectedIndex = 5),
+            isDark,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _buildQuickActionButton(
+            'Generate Report',
+            Icons.bar_chart_rounded,
+            AppColors.infoLight,
+            () => setState(() => _selectedIndex = 7),
+            isDark,
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActionButton(
+    String title,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+    bool isDark,
+  ) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            border: Border.all(color: color.withValues(alpha: 0.2)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Icon(Icons.arrow_forward_ios_rounded, color: color, size: 16),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -695,13 +864,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   IconData _getIconData(String iconName) {
     switch (iconName) {
       case 'person_add':
-        return Icons.person_add;
+        return Icons.person_add_rounded;
       case 'payment':
-        return Icons.payment;
+        return Icons.payments_rounded;
       case 'fact_check':
-        return Icons.fact_check;
+        return Icons.fact_check_rounded;
       default:
-        return Icons.info;
+        return Icons.info_outline_rounded;
     }
   }
 
@@ -719,38 +888,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return 'Just now';
     }
   }
-
-  Widget _buildQuickAction(
-    String title,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(width: 12),
-            Text(
-              title,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _NavItem {
@@ -758,9 +895,5 @@ class _NavItem {
   final IconData icon;
   final Color color;
 
-  _NavItem({
-    required this.title,
-    required this.icon,
-    required this.color,
-  });
+  _NavItem({required this.title, required this.icon, required this.color});
 }

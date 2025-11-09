@@ -4,6 +4,10 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/fee.dart';
 import '../../utils/helpers.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_typography.dart';
+import '../../widgets/custom_widgets.dart';
 import 'add_edit_fee_screen.dart';
 
 class FeesScreen extends StatefulWidget {
@@ -28,76 +32,17 @@ class _FeesScreenState extends State<FeesScreen> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final schoolId = authProvider.currentSchool?.id ?? '';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Fee Management'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const AddEditFeeScreen(),
-                ),
-              );
-            },
-            tooltip: 'Add Fee Record',
-          ),
-        ],
-      ),
+      backgroundColor: isDark
+          ? AppColors.backgroundDark
+          : AppColors.backgroundLight,
       body: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: Colors.grey[100],
-            child: Column(
-              children: [
-                TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search by student name...',
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() {
-                                _searchQuery = '';
-                              });
-                            },
-                          )
-                        : null,
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      _searchQuery = value.toLowerCase();
-                    });
-                  },
-                ),
-                const SizedBox(height: 12),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _buildFilterChip('All', 'all'),
-                      const SizedBox(width: 8),
-                      _buildFilterChip('Paid', 'paid'),
-                      const SizedBox(width: 8),
-                      _buildFilterChip('Unpaid', 'unpaid'),
-                      const SizedBox(width: 8),
-                      _buildFilterChip('Partial', 'partial'),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // Modern Header with Search
+          _buildModernHeader(isDark),
+          // Content
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
@@ -107,202 +52,131 @@ class _FeesScreenState extends State<FeesScreen> {
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                var fees = snapshot.data!.docs
-                    .map((doc) => Fee.fromMap(
-                          doc.data() as Map<String, dynamic>,
-                          doc.id,
-                        ))
-                    .where((fee) {
-                  // Apply status filter
-                  if (_statusFilter != 'all' && fee.status != _statusFilter) {
-                    return false;
-                  }
-                  // Apply search filter
-                  if (_searchQuery.isEmpty) return true;
-                  return fee.studentName.toLowerCase().contains(_searchQuery) ||
-                      fee.studentId.toLowerCase().contains(_searchQuery);
-                }).toList();
-
-                if (fees.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          Icons.payment_outlined,
-                          size: 80,
-                          color: Colors.grey[400],
+                          Icons.error_outline_rounded,
+                          size: 64,
+                          color: AppColors.errorLight,
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: AppSpacing.md),
                         Text(
-                          _searchQuery.isEmpty && _statusFilter == 'all'
-                              ? 'No fee records found'
-                              : 'No records match your filters',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey[600],
+                          'Error: ${snapshot.error}',
+                          style: AppTypography.bodyLarge.copyWith(
+                            color: AppColors.errorLight,
                           ),
                         ),
-                        if (_searchQuery.isEmpty && _statusFilter == 'all') ...[
-                          const SizedBox(height: 16),
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const AddEditFeeScreen(),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.add),
-                            label: const Text('Add First Fee Record'),
-                          ),
-                        ],
                       ],
                     ),
                   );
                 }
 
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const LoadingWidget(message: 'Loading fee records...');
+                }
+
+                var fees = snapshot.data!.docs
+                    .map(
+                      (doc) => Fee.fromMap(
+                        doc.data() as Map<String, dynamic>,
+                        doc.id,
+                      ),
+                    )
+                    .where((fee) {
+                      // Apply status filter
+                      if (_statusFilter != 'all' &&
+                          fee.status != _statusFilter) {
+                        return false;
+                      }
+                      // Apply search filter
+                      if (_searchQuery.isEmpty) return true;
+                      return fee.studentName.toLowerCase().contains(
+                            _searchQuery,
+                          ) ||
+                          fee.studentId.toLowerCase().contains(_searchQuery);
+                    })
+                    .toList();
+
+                if (fees.isEmpty) {
+                  return ModernEmptyState(
+                    icon: _searchQuery.isEmpty && _statusFilter == 'all'
+                        ? Icons.payment_outlined
+                        : Icons.search_off_rounded,
+                    title: _searchQuery.isEmpty && _statusFilter == 'all'
+                        ? 'No Fee Records Found'
+                        : 'No Search Results',
+                    subtitle: _searchQuery.isEmpty && _statusFilter == 'all'
+                        ? 'Get started by adding your first fee record'
+                        : 'No fee records match your filters',
+                    actionText: _searchQuery.isEmpty && _statusFilter == 'all'
+                        ? 'Add Fee Record'
+                        : null,
+                    onAction: _searchQuery.isEmpty && _statusFilter == 'all'
+                        ? () => _navigateToAddFee(context)
+                        : null,
+                  );
+                }
+
                 // Calculate statistics
                 final totalAmount = fees.fold<double>(
-                    0, (sum, fee) => sum + fee.amount);
+                  0,
+                  (sum, fee) => sum + fee.amount,
+                );
                 final totalPaid = fees.fold<double>(
-                    0, (sum, fee) => sum + fee.paidAmount);
+                  0,
+                  (sum, fee) => sum + fee.paidAmount,
+                );
                 final totalPending = totalAmount - totalPaid;
 
                 return Column(
                   children: [
+                    // Statistics Cards
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(AppSpacing.md),
                       child: Row(
                         children: [
                           Expanded(
                             child: _buildStatCard(
                               'Total',
                               'Rs. ${totalAmount.toStringAsFixed(0)}',
-                              Colors.blue,
+                              AppColors.dashboardFees,
+                              Icons.account_balance_wallet_rounded,
+                              isDark,
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: _buildStatCard(
                               'Paid',
                               'Rs. ${totalPaid.toStringAsFixed(0)}',
-                              Colors.green,
+                              AppColors.successLight,
+                              Icons.check_circle_rounded,
+                              isDark,
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: _buildStatCard(
                               'Pending',
                               'Rs. ${totalPending.toStringAsFixed(0)}',
-                              Colors.orange,
+                              AppColors.warningLight,
+                              Icons.pending_rounded,
+                              isDark,
                             ),
                           ),
                         ],
                       ),
                     ),
+                    // Fee List
                     Expanded(
                       child: ListView.builder(
                         itemCount: fees.length,
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(AppSpacing.md),
                         itemBuilder: (context, index) {
                           final fee = fees[index];
-                          Color statusColor;
-                          IconData statusIcon;
-
-                          switch (fee.status) {
-                            case 'paid':
-                              statusColor = Colors.green;
-                              statusIcon = Icons.check_circle;
-                              break;
-                            case 'unpaid':
-                              statusColor = Colors.red;
-                              statusIcon = Icons.cancel;
-                              break;
-                            case 'partial':
-                              statusColor = Colors.orange;
-                              statusIcon = Icons.access_time;
-                              break;
-                            default:
-                              statusColor = Colors.grey;
-                              statusIcon = Icons.help;
-                          }
-
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: statusColor,
-                                child: Icon(statusIcon, color: Colors.white),
-                              ),
-                              title: Text(
-                                fee.studentName,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const SizedBox(height: 4),
-                                  Text('Month: ${fee.month} ${fee.year}'),
-                                  Text('Class: ${fee.className} - ${fee.section}'),
-                                  Text(
-                                      'Amount: Rs. ${fee.amount} | Paid: Rs. ${fee.paidAmount}'),
-                                  Text('Due: ${Helpers.formatDate(fee.dueDate)}'),
-                                ],
-                              ),
-                              isThreeLine: true,
-                              trailing: PopupMenuButton(
-                                itemBuilder: (context) => [
-                                  const PopupMenuItem(
-                                    value: 'edit',
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.edit),
-                                        SizedBox(width: 8),
-                                        Text('Edit'),
-                                      ],
-                                    ),
-                                  ),
-                                  const PopupMenuItem(
-                                    value: 'delete',
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.delete, color: Colors.red),
-                                        SizedBox(width: 8),
-                                        Text('Delete',
-                                            style: TextStyle(color: Colors.red)),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                                onSelected: (value) {
-                                  if (value == 'edit') {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            AddEditFeeScreen(fee: fee),
-                                      ),
-                                    );
-                                  } else if (value == 'delete') {
-                                    _confirmDelete(context, fee);
-                                  }
-                                },
-                              ),
-                              onTap: () {
-                                _showFeeDetails(context, fee);
-                              },
-                            ),
-                          );
+                          return _buildFeeCard(fee, isDark);
                         },
                       ),
                     ),
@@ -313,40 +187,195 @@ class _FeesScreenState extends State<FeesScreen> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _navigateToAddFee(context),
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Add Fee'),
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8), // use 0 for sharp corners
+        ),
+      ),
     );
   }
 
-  Widget _buildFilterChip(String label, String value) {
+  Widget _buildModernHeader(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Fee Management',
+                      style: AppTypography.headlineMedium.copyWith(
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Track and manage all fee collections',
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          // Modern Search Bar
+          ModernSearchBar(
+            controller: _searchController,
+            hint: 'Search by student name or ID...',
+            onChanged: (value) {
+              setState(() {
+                _searchQuery = value.toLowerCase();
+              });
+            },
+            onClear: () {
+              setState(() {
+                _searchQuery = '';
+              });
+            },
+          ),
+          const SizedBox(height: AppSpacing.md),
+          // Filter Chips
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildFilterChip('All', 'all', isDark),
+                const SizedBox(width: AppSpacing.sm),
+                _buildFilterChip('Paid', 'paid', isDark),
+                const SizedBox(width: AppSpacing.sm),
+                _buildFilterChip('Unpaid', 'unpaid', isDark),
+                const SizedBox(width: AppSpacing.sm),
+                _buildFilterChip('Partial', 'partial', isDark),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, String value, bool isDark) {
     final isSelected = _statusFilter == value;
-    return FilterChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (selected) {
-        setState(() {
-          _statusFilter = value;
-        });
-      },
+    Color chipColor;
+
+    switch (value) {
+      case 'paid':
+        chipColor = AppColors.successLight;
+        break;
+      case 'unpaid':
+        chipColor = AppColors.errorLight;
+        break;
+      case 'partial':
+        chipColor = AppColors.warningLight;
+        break;
+      default:
+        chipColor = AppColors.dashboardFees;
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _statusFilter = value;
+          });
+        },
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? chipColor
+                : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            border: Border.all(
+              color: isSelected
+                  ? chipColor
+                  : (isDark ? AppColors.borderDark : AppColors.borderLight),
+            ),
+          ),
+          child: Text(
+            label,
+            style: AppTypography.labelMedium.copyWith(
+              color: isSelected
+                  ? Colors.white
+                  : (isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight),
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildStatCard(String title, String value, Color color) {
-    return Card(
+  Widget _buildStatCard(
+    String title,
+    String value,
+    Color color,
+    IconData icon,
+    bool isDark,
+  ) {
+    return CustomCard(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           children: [
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               value,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              style: AppTypography.titleLarge.copyWith(
                 color: color,
+                fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               title,
-              style: const TextStyle(fontSize: 12),
+              style: AppTypography.bodySmall.copyWith(
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
             ),
           ],
         ),
@@ -354,110 +383,498 @@ class _FeesScreenState extends State<FeesScreen> {
     );
   }
 
-  void _confirmDelete(BuildContext context, Fee fee) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Fee Record'),
-        content: Text(
-            'Are you sure you want to delete this fee record for ${fee.studentName}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              try {
-                await FirebaseFirestore.instance
-                    .collection('fees')
-                    .doc(fee.id)
-                    .delete();
-                if (context.mounted) {
-                  Helpers.showSnackBar(
-                    context,
-                    'Fee record deleted successfully',
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  Helpers.showSnackBar(
-                    context,
-                    'Error deleting fee record: $e',
-                    isError: true,
-                  );
-                }
-              }
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
+  Widget _buildFeeCard(Fee fee, bool isDark) {
+    Color statusColor;
+    IconData statusIcon;
+    String statusLabel;
+
+    switch (fee.status) {
+      case 'paid':
+        statusColor = AppColors.successLight;
+        statusIcon = Icons.check_circle_rounded;
+        statusLabel = 'Paid';
+        break;
+      case 'unpaid':
+        statusColor = AppColors.errorLight;
+        statusIcon = Icons.cancel_rounded;
+        statusLabel = 'Unpaid';
+        break;
+      case 'partial':
+        statusColor = AppColors.warningLight;
+        statusIcon = Icons.pending_rounded;
+        statusLabel = 'Partial';
+        break;
+      default:
+        statusColor = Colors.grey;
+        statusIcon = Icons.help_rounded;
+        statusLabel = 'Unknown';
+    }
+
+    // Check if overdue
+    final isOverdue =
+        fee.status != 'paid' && fee.dueDate.isBefore(DateTime.now());
+    if (isOverdue) {
+      statusColor = AppColors.errorLight;
+      statusLabel = 'Overdue';
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: CustomCard(
+        onTap: () => _showFeeDetails(context, fee, isDark),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                // Status Indicator
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [statusColor, statusColor.withValues(alpha: 0.7)],
+                    ),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  ),
+                  child: Icon(statusIcon, color: Colors.white, size: 24),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                // Student Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        fee.studentName,
+                        style: AppTypography.titleMedium.copyWith(
+                          color: isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimaryLight,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${fee.className} - ${fee.section} | ${fee.month} ${fee.year}',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Status Chip
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                    border: Border.all(
+                      color: statusColor.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Text(
+                    statusLabel,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: statusColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                // Menu
+                PopupMenuButton<String>(
+                  icon: Icon(
+                    Icons.more_vert_rounded,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  ),
+                  itemBuilder: (context) => <PopupMenuEntry<String>>[
+                    PopupMenuItem(
+                      value: 'view',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.visibility_rounded,
+                            size: 20,
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight,
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          const Text('View Details'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.edit_rounded,
+                            size: 20,
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight,
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          const Text('Edit'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuDivider(),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.delete_rounded,
+                            size: 20,
+                            color: AppColors.errorLight,
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Text(
+                            'Delete',
+                            style: TextStyle(color: AppColors.errorLight),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  onSelected: (value) {
+                    if (value == 'view') {
+                      _showFeeDetails(context, fee, isDark);
+                    } else if (value == 'edit') {
+                      _navigateToEditFee(context, fee);
+                    } else if (value == 'delete') {
+                      _confirmDelete(context, fee);
+                    }
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            // Fee Details
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? AppColors.surfaceDark
+                    : AppColors.backgroundLight,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildFeeInfoChip(
+                      'Amount',
+                      'Rs. ${fee.amount.toStringAsFixed(0)}',
+                      Icons.account_balance_wallet_rounded,
+                      AppColors.dashboardFees,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: _buildFeeInfoChip(
+                      'Paid',
+                      'Rs. ${fee.paidAmount.toStringAsFixed(0)}',
+                      Icons.payment_rounded,
+                      AppColors.successLight,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: _buildFeeInfoChip(
+                      'Due',
+                      Helpers.formatDate(fee.dueDate),
+                      Icons.calendar_today_rounded,
+                      isOverdue
+                          ? AppColors.errorLight
+                          : AppColors.dashboardFees,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  void _showFeeDetails(BuildContext context, Fee fee) {
+  Widget _buildFeeInfoChip(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: AppTypography.labelSmall.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                value,
+                style: AppTypography.bodySmall.copyWith(color: color),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _navigateToAddFee(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AddEditFeeScreen()),
+    );
+  }
+
+  void _navigateToEditFee(BuildContext context, Fee fee) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => AddEditFeeScreen(fee: fee)),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, Fee fee) async {
+    final confirmed = await CustomDialog.showConfirmation(
+      context: context,
+      title: 'Delete Fee Record',
+      message:
+          'Are you sure you want to delete this fee record for ${fee.studentName}? This action cannot be undone.',
+      confirmText: 'Delete',
+      isDanger: true,
+      icon: Icons.delete_rounded,
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await FirebaseFirestore.instance.collection('fees').doc(fee.id).delete();
+
+      if (context.mounted) {
+        Helpers.showSnackBar(context, 'Fee record deleted successfully');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Helpers.showSnackBar(
+          context,
+          'Error deleting fee record: $e',
+          isError: true,
+        );
+      }
+    }
+  }
+
+  void _showFeeDetails(BuildContext context, Fee fee, bool isDark) {
+    Color statusColor;
+    switch (fee.status) {
+      case 'paid':
+        statusColor = AppColors.successLight;
+        break;
+      case 'unpaid':
+        statusColor = AppColors.errorLight;
+        break;
+      case 'partial':
+        statusColor = AppColors.warningLight;
+        break;
+      default:
+        statusColor = Colors.grey;
+    }
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(fee.studentName),
+      builder: (context) => CustomDialog(
+        title: fee.studentName,
+        icon: Icons.payment_rounded,
+        iconColor: AppColors.dashboardFees,
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildDetailRow('Student ID', fee.studentId),
-              _buildDetailRow('Class', '${fee.className} - ${fee.section}'),
-              _buildDetailRow('Month', '${fee.month} ${fee.year}'),
-              _buildDetailRow('Amount', 'Rs. ${fee.amount}'),
-              _buildDetailRow('Paid Amount', 'Rs. ${fee.paidAmount}'),
-              _buildDetailRow('Remaining', 'Rs. ${fee.remainingAmount}'),
-              _buildDetailRow('Status', fee.status.toUpperCase()),
-              _buildDetailRow('Due Date', Helpers.formatDate(fee.dueDate)),
-              if (fee.paidDate != null)
-                _buildDetailRow('Paid Date', Helpers.formatDate(fee.paidDate!)),
-              if (fee.remarks != null)
-                _buildDetailRow('Remarks', fee.remarks!),
+              _buildDetailRow(
+                'Student ID',
+                fee.studentId,
+                Icons.badge_rounded,
+                isDark,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _buildDetailRow(
+                'Class',
+                '${fee.className} - ${fee.section}',
+                Icons.class_rounded,
+                isDark,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _buildDetailRow(
+                'Month',
+                '${fee.month} ${fee.year}',
+                Icons.calendar_month_rounded,
+                isDark,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _buildDetailRow(
+                'Amount',
+                'Rs. ${fee.amount}',
+                Icons.account_balance_wallet_rounded,
+                isDark,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _buildDetailRow(
+                'Paid Amount',
+                'Rs. ${fee.paidAmount}',
+                Icons.payment_rounded,
+                isDark,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _buildDetailRow(
+                'Remaining',
+                'Rs. ${fee.remainingAmount}',
+                Icons.pending_rounded,
+                isDark,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                  border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_rounded, size: 16, color: statusColor),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      'Status: ${fee.status.toUpperCase()}',
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: statusColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _buildDetailRow(
+                'Due Date',
+                Helpers.formatDate(fee.dueDate),
+                Icons.calendar_today_rounded,
+                isDark,
+              ),
+              if (fee.paidDate != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                _buildDetailRow(
+                  'Paid Date',
+                  Helpers.formatDate(fee.paidDate!),
+                  Icons.event_available_rounded,
+                  isDark,
+                ),
+              ],
+              if (fee.remarks != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                _buildDetailRow(
+                  'Remarks',
+                  fee.remarks!,
+                  Icons.note_rounded,
+                  isDark,
+                ),
+              ],
             ],
           ),
         ),
         actions: [
-          TextButton(
+          CustomButton(
+            text: 'Close',
+            variant: ButtonVariant.ghost,
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
           ),
-          ElevatedButton(
+          CustomButton(
+            text: 'Edit',
+            icon: Icons.edit_rounded,
             onPressed: () {
               Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => AddEditFeeScreen(fee: fee),
-                ),
-              );
+              _navigateToEditFee(context, fee);
             },
-            child: const Text('Edit'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+  Widget _buildDetailRow(
+    String label,
+    String value,
+    IconData icon,
+    bool isDark,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : AppColors.backgroundLight,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              '$label:',
-              style: const TextStyle(fontWeight: FontWeight.bold),
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.xs),
+            decoration: BoxDecoration(
+              color: AppColors.dashboardFees.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusXs),
+            ),
+            child: Icon(icon, size: 16, color: AppColors.dashboardFees),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
+                  ),
+                ),
+              ],
             ),
           ),
-          Expanded(child: Text(value)),
         ],
       ),
     );
