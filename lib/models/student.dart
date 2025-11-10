@@ -1,3 +1,5 @@
+import '../utils/constants.dart';
+
 class Student {
   final String? id;
   final String schoolId;
@@ -11,7 +13,7 @@ class Student {
   final String address;
   final DateTime admissionDate;
   final String? photoUrl;
-  final String status; // 'active', 'graduated', 'left'
+  final String status; // AppConstants.studentActive, studentGraduated, studentLeft
   final DateTime? graduationDate;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -30,7 +32,7 @@ class Student {
     required this.address,
     required this.admissionDate,
     this.photoUrl,
-    this.status = 'active',
+    this.status = AppConstants.studentActive,
     this.graduationDate,
     required this.createdAt,
     required this.updatedAt,
@@ -53,7 +55,7 @@ class Student {
           ? DateTime.parse(map['admissionDate'])
           : DateTime.now(),
       photoUrl: map['photoUrl'],
-      status: map['status'] ?? 'active',
+      status: map['status'] ?? AppConstants.studentActive,
       graduationDate: map['graduationDate'] != null
           ? DateTime.parse(map['graduationDate'])
           : null,

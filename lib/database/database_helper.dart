@@ -85,6 +85,8 @@ class DatabaseHelper {
         address TEXT,
         admissionDate $textType,
         photoUrl TEXT,
+        status TEXT DEFAULT 'active',
+        graduationDate TEXT,
         createdAt $textType,
         updatedAt $textType,
         synced $boolType

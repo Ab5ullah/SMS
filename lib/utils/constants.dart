@@ -23,6 +23,11 @@ class AppConstants {
   static const String feeUnpaid = 'unpaid';
   static const String feePartial = 'partial';
 
+  // Student Status
+  static const String studentActive = 'active';
+  static const String studentGraduated = 'graduated';
+  static const String studentLeft = 'left';
+
   // License Status
   static const String licenseActive = 'active';
   static const String licenseInactive = 'inactive';

@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../models/student.dart';
 import '../../models/class_section.dart';
 import '../../utils/helpers.dart';
+import '../../utils/constants.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
@@ -681,7 +682,7 @@ class _StudentPromotionScreenState extends State<StudentPromotionScreen> {
                       doc.data() as Map<String, dynamic>,
                       doc.id,
                     ))
-                .where((student) => student.status == 'active')
+                .where((student) => student.status == AppConstants.studentActive)
                 .toList() ??
             [];
 
@@ -823,14 +824,14 @@ class _StudentPromotionScreenState extends State<StudentPromotionScreen> {
             text: 'Graduated',
             size: ButtonSize.small,
             variant: ButtonVariant.success,
-            onPressed: () => _markStudentStatus(student, 'graduated'),
+            onPressed: () => _markStudentStatus(student, AppConstants.studentGraduated),
           ),
           const SizedBox(width: AppSpacing.sm),
           CustomButton(
             text: 'Left',
             size: ButtonSize.small,
             variant: ButtonVariant.danger,
-            onPressed: () => _markStudentStatus(student, 'left'),
+            onPressed: () => _markStudentStatus(student, AppConstants.studentLeft),
           ),
         ],
       ),
@@ -838,7 +839,30 @@ class _StudentPromotionScreenState extends State<StudentPromotionScreen> {
   }
 
   Future<void> _markStudentStatus(Student student, String status) async {
-    final statusText = status == 'graduated' ? 'Graduated' : 'Left';
+    // Validate status transition - once graduated or left, cannot change status
+    if (student.status == AppConstants.studentGraduated) {
+      if (mounted) {
+        Helpers.showSnackBar(
+          context,
+          'Cannot change status of a graduated student',
+          SnackBarType.error,
+        );
+      }
+      return;
+    }
+
+    if (student.status == AppConstants.studentLeft) {
+      if (mounted) {
+        Helpers.showSnackBar(
+          context,
+          'Cannot change status of a student who has left',
+          SnackBarType.error,
+        );
+      }
+      return;
+    }
+
+    final statusText = status == AppConstants.studentGraduated ? 'Graduated' : 'Left';
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => CustomDialog(
@@ -854,7 +878,7 @@ class _StudentPromotionScreenState extends State<StudentPromotionScreen> {
           ),
           CustomButton(
             text: 'Mark as $statusText',
-            variant: status == 'graduated'
+            variant: status == AppConstants.studentGraduated
                 ? ButtonVariant.success
                 : ButtonVariant.danger,
             onPressed: () => Navigator.pop(context, true),

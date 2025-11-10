@@ -135,6 +135,7 @@ class _AddEditStudentScreenState extends State<AddEditStudentScreen> {
         'address': _addressController.text.trim(),
         'admissionDate': _admissionDate.toIso8601String(),
         'photoUrl': null,
+        'status': AppConstants.studentActive,
         'updatedAt': now.toIso8601String(),
         'synced': true,
       };

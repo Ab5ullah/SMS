@@ -330,14 +330,22 @@ class _StudentsScreenState extends State<StudentsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    student.name,
-                    style: AppTypography.titleMedium.copyWith(
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimaryLight,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          student.name,
+                          style: AppTypography.titleMedium.copyWith(
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      _buildStatusBadge(student),
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Row(
@@ -503,6 +511,8 @@ class _StudentsScreenState extends State<StudentsScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 4),
+          _buildStatusBadge(student),
+          const SizedBox(height: 4),
           _buildInfoChip(
             icon: Icons.numbers_rounded,
             label: student.rollNumber,
@@ -516,6 +526,58 @@ class _StudentsScreenState extends State<StudentsScreen> {
               color: isDark
                   ? AppColors.textSecondaryDark
                   : AppColors.textSecondaryLight,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(Student student) {
+    Color statusColor;
+    IconData statusIcon;
+    String statusText;
+
+    switch (student.status) {
+      case AppConstants.studentGraduated:
+        statusColor = AppColors.successDark;
+        statusIcon = Icons.school_rounded;
+        statusText = 'Graduated';
+        break;
+      case AppConstants.studentLeft:
+        statusColor = AppColors.errorDark;
+        statusIcon = Icons.exit_to_app_rounded;
+        statusText = 'Left';
+        break;
+      case AppConstants.studentActive:
+      default:
+        statusColor = AppColors.dashboardStudents;
+        statusIcon = Icons.check_circle_rounded;
+        statusText = 'Active';
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xs,
+        vertical: 2,
+      ),
+      decoration: BoxDecoration(
+        color: statusColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXs),
+        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(statusIcon, size: 12, color: statusColor),
+          const SizedBox(width: 4),
+          Text(
+            statusText,
+            style: AppTypography.bodySmall.copyWith(
+              color: statusColor,
+              fontWeight: FontWeight.w600,
+              fontSize: 10,
             ),
           ),
         ],
@@ -658,6 +720,8 @@ class _StudentsScreenState extends State<StudentsScreen> {
                 Icons.calendar_today_rounded,
                 isDark,
               ),
+              const SizedBox(height: AppSpacing.sm),
+              _buildStatusRow(student, isDark),
             ],
           ),
         ),
@@ -724,6 +788,92 @@ class _StudentsScreenState extends State<StudentsScreen> {
                         ? AppColors.textPrimaryDark
                         : AppColors.textPrimaryLight,
                   ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusRow(Student student, bool isDark) {
+    Color statusColor;
+    IconData statusIcon;
+    String statusText;
+
+    switch (student.status) {
+      case AppConstants.studentGraduated:
+        statusColor = AppColors.successDark;
+        statusIcon = Icons.school_rounded;
+        statusText = 'Graduated';
+        break;
+      case AppConstants.studentLeft:
+        statusColor = AppColors.errorDark;
+        statusIcon = Icons.exit_to_app_rounded;
+        statusText = 'Left';
+        break;
+      case AppConstants.studentActive:
+      default:
+        statusColor = AppColors.dashboardStudents;
+        statusIcon = Icons.check_circle_rounded;
+        statusText = 'Active';
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: statusColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.xs),
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusXs),
+            ),
+            child: Icon(statusIcon, size: 16, color: statusColor),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Status',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Text(
+                      statusText,
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: statusColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (student.graduationDate != null) ...[
+                      const SizedBox(width: AppSpacing.xs),
+                      Text(
+                        '(${Helpers.formatDate(student.graduationDate!)})',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
