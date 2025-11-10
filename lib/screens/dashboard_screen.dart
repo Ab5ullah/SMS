@@ -12,9 +12,12 @@ import 'login_screen.dart';
 import 'students/students_screen.dart';
 import 'teachers/teachers_screen.dart';
 import 'classes/classes_screen.dart';
+import 'subjects/subjects_screen.dart';
+import 'timetable/timetable_screen.dart';
 import 'attendance/attendance_screen.dart';
 import 'fees/fees_screen.dart';
 import 'exams/exams_screen.dart';
+import 'promotion/student_promotion_screen.dart';
 import 'reports/reports_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -53,6 +56,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       color: AppColors.dashboardClasses,
     ),
     _NavItem(
+      title: 'Subjects',
+      icon: Icons.book_rounded,
+      color: AppColors.dashboardClasses,
+    ),
+    _NavItem(
+      title: 'Timetable',
+      icon: Icons.calendar_view_week_rounded,
+      color: AppColors.dashboardAttendance,
+    ),
+    _NavItem(
       title: 'Attendance',
       icon: Icons.fact_check_rounded,
       color: AppColors.dashboardAttendance,
@@ -66,6 +79,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       title: 'Exams',
       icon: Icons.assignment_rounded,
       color: AppColors.secondaryLight,
+    ),
+    _NavItem(
+      title: 'Promotion',
+      icon: Icons.school_rounded,
+      color: AppColors.dashboardStudents,
     ),
     _NavItem(
       title: 'Reports',
@@ -466,12 +484,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
       case 3:
         return const ClassesScreen();
       case 4:
-        return const AttendanceScreen();
+        return const SubjectsScreen();
       case 5:
-        return const FeesScreen();
+        return const TimetableScreen();
       case 6:
-        return const ExamsScreen();
+        return const AttendanceScreen();
       case 7:
+        return const FeesScreen();
+      case 8:
+        return const ExamsScreen();
+      case 9:
+        return const StudentPromotionScreen();
+      case 10:
         return const ReportsScreen();
       default:
         return _buildDashboardContent();

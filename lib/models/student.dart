@@ -11,6 +11,8 @@ class Student {
   final String address;
   final DateTime admissionDate;
   final String? photoUrl;
+  final String status; // 'active', 'graduated', 'left'
+  final DateTime? graduationDate;
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool synced;
@@ -28,6 +30,8 @@ class Student {
     required this.address,
     required this.admissionDate,
     this.photoUrl,
+    this.status = 'active',
+    this.graduationDate,
     required this.createdAt,
     required this.updatedAt,
     this.synced = false,
@@ -49,6 +53,10 @@ class Student {
           ? DateTime.parse(map['admissionDate'])
           : DateTime.now(),
       photoUrl: map['photoUrl'],
+      status: map['status'] ?? 'active',
+      graduationDate: map['graduationDate'] != null
+          ? DateTime.parse(map['graduationDate'])
+          : null,
       createdAt: map['createdAt'] != null
           ? DateTime.parse(map['createdAt'])
           : DateTime.now(),
@@ -73,6 +81,8 @@ class Student {
       'address': address,
       'admissionDate': admissionDate.toIso8601String(),
       'photoUrl': photoUrl,
+      'status': status,
+      'graduationDate': graduationDate?.toIso8601String(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'synced': synced,
@@ -92,6 +102,8 @@ class Student {
     String? address,
     DateTime? admissionDate,
     String? photoUrl,
+    String? status,
+    DateTime? graduationDate,
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? synced,
@@ -109,6 +121,8 @@ class Student {
       address: address ?? this.address,
       admissionDate: admissionDate ?? this.admissionDate,
       photoUrl: photoUrl ?? this.photoUrl,
+      status: status ?? this.status,
+      graduationDate: graduationDate ?? this.graduationDate,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       synced: synced ?? this.synced,
